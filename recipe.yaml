@@ -1,0 +1,60 @@
+# The one and only model config. run.sh reads THIS — the boxes themselves live in cluster.env (written by
+# setup.sh on first run, machine-specific, never committed).
+# Flag mapping: `name: value` -> --name value | `name: true` -> --name | `name: false` -> omitted.
+# Cluster flags (--nnodes 2 --node-rank N --master-addr/--master-port --tensor-parallel-size 2 --headless on the
+# worker) and the per-box NCCL/gloo interface pins are added by run.sh from cluster.env — never put them here.
+
+server:
+  image: myllmbox/qwen38-flash-next-cluster-vllm:v1   # pinned public tag, pushed 2026-09-05 (digest sha256:c93988a8…
+                                                      # in README) = the v1 serving image + one patch: the PLE offload
+                                                      # worker allowed on nnodes=2
+  cpuset: "5-9,15-19"                           # the GB10's 10 Cortex-X925 3.9GHz cores (0-4,10-14 are
+                                                # 2.8GHz A725) — measured +2-3% at every concurrency
+  model: myllmbox/Qwen3.8-Flash-Next-hibrid46   # HF repo — downloaded into ./models on first run (~91G),
+                                                # then synced to the worker at the SAME absolute path
+  port: 8000                                    # OpenAI API on the head box
+  host: 127.0.0.1                               # the cluster runs on host networking — 127.0.0.1 keeps the API
+                                                # local; set 0.0.0.0 to expose it on the LAN
+  master_port: 25000                            # torch.distributed rendezvous, on the interconnect
+  models_dir: ./models
+  cache_dir: ./cache                            # compile/autotune caches (per box); deletable, first boot rebuilds
+
+env:
+  VLLM_PLE_CPU_OFFLOAD: "1"                     # the vendor's PLE offload switch — the int3 n-gram table lives
+                                                # in a CPU worker (unified memory, ~18G) — required
+  MBX_PLE_MULTINODE: "1"                        # this image's patch: one full-table worker PER BOX (upstream
+                                                # refuses offload at nnodes=2 without it)
+  OMP_NUM_THREADS: "8"                          # matched to the 10-core pin
+  MBX_VOCAB_GEMV: "1"                           # measured +5.5% steps
+  VLLM_MARLIN_USE_ATOMIC_ADD: "1"               # Marlin small-N fast path (self-gating)
+  TORCH_CUDA_ARCH_LIST: "12.1a"
+  FLASHINFER_CUDA_ARCH_LIST: "12.1a"
+  # RoCE v2 over the ConnectX link (NCCL_SOCKET_IFNAME / NCCL_IB_HCA / GLOO_SOCKET_IFNAME / VLLM_HOST_IP are
+  # per box and come from cluster.env). Validated set: RDMA port counters moving, TCP path flat.
+  NCCL_IB_GID_INDEX: "3"
+  NCCL_IB_ROCE_VERSION_NUM: "2"
+  NCCL_IB_ADDR_FAMILY: "AF_INET"
+  NCCL_CROSS_NIC: "1"
+  NCCL_IGNORE_CPU_AFFINITY: "1"
+  NCCL_CUMEM_ENABLE: "0"
+  NCCL_NVLS_ENABLE: "0"
+
+vllm:
+  served-model-name: Qwen/Qwen3.8-Flash-Next
+  pipeline-parallel-size: 1                     # TP only (TP=2 is set by run.sh = box count)
+  distributed-executor-backend: mp              # required — PLE worker spawn; no Ray
+  gpu-memory-utilization: 0.70
+  kv-cache-memory: "46000000000"                # 46G per box = ~3.1M pooled KV tokens (KV is split across the
+                                                # two boxes). vLLM's "fit" figure at 0.70 was 39G; 46 leaves
+                                                # ~11G host headroom per box — do not take the "fully utilize" 64G
+  max-model-len: 262144                         # the model's native max
+  max-num-seqs: 64                              # measured: 667 tok/s code / 540 avg aggregate at 64 streams;
+                                                # 52 and 64 are the efficient tops (56/60 pay a 64-sized step)
+  max-num-batched-tokens: 8192                  # also the image-input encoder budget — keep for image requests
+  enable-prefix-caching: true
+  enable-auto-tool-choice: true
+  tool-call-parser: qwen3_xml
+  reasoning-parser: qwen3
+  speculative-config: '{"method":"mtp","num_speculative_tokens":4}'   # K=4: acceptance 4.2–4.6 (cap 5.0), ~8%
+                                                # step cost vs K=3, net faster at every concurrency
+  async-scheduling: true                        # +9-12% at c=4-5, neutral at 8+

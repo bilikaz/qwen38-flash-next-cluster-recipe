@@ -1,0 +1,4 @@
+# runtime data the kit creates — never tracked
+cluster.env
+cache/
+models/
