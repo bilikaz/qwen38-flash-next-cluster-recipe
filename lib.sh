@@ -111,8 +111,8 @@ except Exception:
 # `echo 3 > drop_caches`; we never ask for root. Instead we drop exactly the files we own from the cache with
 # POSIX_FADV_DONTNEED via GNU dd — any user may do that to a file they can read. Runs on the head locally and on
 # the worker over ssh. Usage: evict_cache <dir>   (all *.safetensors in it)
-EVICT='for f in "$1"/*.safetensors; do dd if="$f" iflag=nocache count=0 status=none 2>/dev/null || true; done; awk "/^MemFree/{printf \"%d\", \$2/1048576}" /proc/meminfo'
-evict_cache() {  # evict_cache <model dir>  → prints "head <free GiB> · worker <free GiB>" after eviction
+EVICT='find "$1" -type f -name "*.safetensors" -exec dd if={} iflag=nocache count=0 status=none \; 2>/dev/null; awk "/^MemFree/{printf \"%d\", \$2/1048576}" /proc/meminfo'
+evict_cache() {  # evict_cache <models dir>  (every checkpoint under it) → prints MemFree after eviction
   local h w
   h=$(bash -c "$EVICT" _ "$1")
   w=$(ssh_w "bash -c '$EVICT' _ '$1'" 2>/dev/null || echo "?")
