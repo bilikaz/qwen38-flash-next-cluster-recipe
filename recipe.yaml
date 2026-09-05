@@ -44,7 +44,7 @@ vllm:
   served-model-name: Qwen/Qwen3.8-Flash-Next
   pipeline-parallel-size: 1                     # TP only (TP=2 is set by run.sh = box count)
   distributed-executor-backend: mp              # required — PLE worker spawn; no Ray
-  gpu-memory-utilization: 0.60
+  gpu-memory-utilization: 0.70
   kv-cache-memory: "46000000000"                # 46G per box = ~3.1M pooled KV tokens (KV is split across the
                                                 # two boxes). vLLM's "fit" figure at 0.70 was 39G; 46 leaves
                                                 # ~11G host headroom per box — do not take the "fully utilize" 64G
