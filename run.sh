@@ -59,9 +59,6 @@ for side in head worker; do
   fi
 done
 
-# 3. memory sanity on both (UMA reclaim race after a teardown = phantom OOM)
-warn_mem head   "$(free -g | awk '/^Mem:/{print $7}')"
-warn_mem worker "$(ssh_w "free -g | awk '/^Mem:/{print \$7}'")"
 
 # 4. compose the docker run for a rank. Host networking + the three RDMA flags (without them NCCL silently
 #    falls back to TCP over the same cable — half the speed, no error). Per-box pins: NCCL/gloo on the
@@ -90,10 +87,13 @@ HEAD_RDMA=$([ -d /dev/infiniband ] && echo yes || echo no)
 WORKER_RDMA=$(ssh_w "[ -d /dev/infiniband ] && echo yes || echo no")
 [ "$HEAD_RDMA$WORKER_RDMA" = yesyes ] || echo "  ⚠ RDMA not available on both boxes (head $HEAD_RDMA, worker $WORKER_RDMA) — running NCCL over TCP"
 
-# 5. launch: clear old containers, HEAD first (the rendezvous master), then the worker — the order every
-#    successful TP=2 boot of this model used; the worker retries the connect until the head listens.
+# 5. launch: clear old containers, then GATE on memory (unified memory needs ~30-60 s after a container dies;
+#    launching earlier = a phantom CUDA OOM), then HEAD first (the rendezvous master), then the worker — the order
+#    every successful TP=2 boot of this model used; the worker retries the connect until the head listens.
 docker rm -f "$NAME" >/dev/null 2>&1 || true
 ssh_w "docker rm -f '$NAME' >/dev/null 2>&1 || true"
+wait_mem 100 120 || exit 1
+evict_cache "$MODEL_DIR"
 echo "· starting head (rank 0) — API on $HOST:$PORT once healthy (first boot ~10 min: load + compile warmup)"
 eval "$(compose 0 "$HEAD_IFACE" "$HEAD_IC" "$HEAD_HCA" "$HEAD_RDMA")" >/dev/null
 sleep 2

@@ -82,6 +82,21 @@ proves it by sampling the HCA's port counter against the interface's TCP byte co
 (RDMA moving, TCP flat = good). If `/dev/infiniband` is missing on a box (`rdma-core` not installed, or the link
 is not a ConnectX one), the kit still runs, over TCP, and says so.
 
+## Memory on a Spark: what the kit does about it
+
+Unified memory means the GPU driver and the page cache share one pool, and the driver wants pages that are
+**free**, not just reclaimable. After a few model loads the checkpoint's shards sit in the page cache and free
+memory drops to ~1 GB while the next load allocates — the driver can stall on a copy that never completes, and the
+boot looks hung at 100 % CPU. The kit never asks for your password; it stabilises memory with what a user may do:
+
+- **waits** after removing old containers until both boxes report ≥ 100 GB available (unified memory takes
+  30–60 s to come back after a container dies; launching earlier gives a phantom "CUDA out of memory"),
+- **evicts its own checkpoint files from the page cache** before launch (`dd iflag=nocache`, no privileges),
+- the image's loader **drops each shard from the cache as soon as it has been consumed**, so the cache never
+  balloons during the load itself.
+
+Nothing to do on your side.
+
 ## Tuning (recipe.yaml)
 
 - **`kv-cache-memory`** (bytes, per box): 46G default. vLLM's own "fit" figure at util 0.70 is 39G; 46 leaves
@@ -100,14 +115,20 @@ is not a ConnectX one), the kit still runs, over TCP, and says so.
 
 ## What's in the image
 
-`myllmbox/qwen38-flash-next-cluster-vllm:v1` (pushed 2026-09-05) — the single-Spark kit's image
-(`myllmbox/qwen38-flash-next-vllm:v1`, vendor SM121 vLLM + the int3 n-gram-table loader patch) plus **one more
-readable patch**: upstream vLLM refuses its PLE CPU-offload worker when `nnodes != 1`; the patch (gated by
-`MBX_PLE_MULTINODE=1`) runs one full-table worker per box and lets each rank feed its own. Six anchored edits in
-`gpu_worker.py`, `ple_offload/worker.py`, `ple_offload/connector.py`, each refusing to apply twice. The
-Dockerfile, the patch script and the build ledger live in the myllmbox repo under
+`myllmbox/qwen38-flash-next-cluster-vllm:v2` (pushed 2026-09-05) — the single-Spark kit's image
+(`myllmbox/qwen38-flash-next-vllm:v1`, vendor SM121 vLLM + the int3 n-gram-table loader patch) plus **two more
+readable patches**:
+
+1. upstream vLLM refuses its PLE CPU-offload worker when `nnodes != 1`; the patch (gated by `MBX_PLE_MULTINODE=1`)
+   runs one full-table worker per box and lets each rank feed its own. Six anchored edits in `gpu_worker.py`,
+   `ple_offload/worker.py`, `ple_offload/connector.py`.
+2. the safetensors loader drops each shard's pages from the page cache as soon as its tensors are consumed
+   (`POSIX_FADV_DONTNEED`, gate `MBX_LOAD_DROP_CACHE=0` to disable) — see "Memory on a Spark" above.
+
+Each patch refuses to apply twice and fails the build if its anchor moved. The Dockerfile, the patch scripts and
+the build ledger live in the myllmbox repo under
 [`builds/qwen38-flash-next/cluster/`](https://github.com/bilikaz/myllmbox-runner/tree/main/builds/qwen38-flash-next/cluster)
-— rebuild and diff it yourself. Digest: `sha256:c93988a847674d742fc4cc87ec2bd386c753727d65e8bbc4b739de9a9da68618`.
+— rebuild and diff it yourself. Digest: `sha256:21634ef576ac5a185327d548c410931a79e64f217074421e28b569d76108c1b2`.
 
 ## The full box
 

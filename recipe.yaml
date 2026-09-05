@@ -5,9 +5,10 @@
 # worker) and the per-box NCCL/gloo interface pins are added by run.sh from cluster.env — never put them here.
 
 server:
-  image: myllmbox/qwen38-flash-next-cluster-vllm:v1   # pinned public tag, pushed 2026-09-05 (digest sha256:c93988a8…
-                                                      # in README) = the v1 serving image + one patch: the PLE offload
-                                                      # worker allowed on nnodes=2
+  image: myllmbox/qwen38-flash-next-cluster-vllm:v2   # pinned public tag, pushed 2026-09-05 (digest sha256:21634ef5…
+                                                      # in README) = the v1 serving image + two patches: PLE offload
+                                                      # worker allowed on nnodes=2; loader drops each shard from the
+                                                      # page cache once consumed (unified-memory stability)
   cpuset: "5-9,15-19"                           # the GB10's 10 Cortex-X925 3.9GHz cores (0-4,10-14 are
                                                 # 2.8GHz A725) — measured +2-3% at every concurrency
   model: myllmbox/Qwen3.8-Flash-Next-hibrid46   # HF repo — downloaded into ./models on first run (~91G),
@@ -43,7 +44,7 @@ vllm:
   served-model-name: Qwen/Qwen3.8-Flash-Next
   pipeline-parallel-size: 1                     # TP only (TP=2 is set by run.sh = box count)
   distributed-executor-backend: mp              # required — PLE worker spawn; no Ray
-  gpu-memory-utilization: 0.70
+  gpu-memory-utilization: 0.60
   kv-cache-memory: "46000000000"                # 46G per box = ~3.1M pooled KV tokens (KV is split across the
                                                 # two boxes). vLLM's "fit" figure at 0.70 was 39G; 46 leaves
                                                 # ~11G host headroom per box — do not take the "fully utilize" 64G

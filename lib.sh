@@ -58,12 +58,22 @@ probe() {  # probe [user@host]
 pfield() { echo "$1" | awk -v k="$2" '$1==k {$1=""; sub(/^ /,""); print; exit}'; }   # pfield "<probe out>" GPU
 route_dev() { ip -o route get "$1" 2>/dev/null | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -1; }   # local iface that reaches an IP
 
-# --- memory sanity (UMA: a serve relaunched seconds after a teardown sees phantom OOMs) ---------------
-warn_mem() {  # warn_mem <label> <free GiB>
-  if [ -n "$2" ] && [ "$2" -lt 100 ]; then
-    echo "  ⚠ $1: only ${2}G free — the model needs ~100G per box. Another serve running? Just stopped one?" >&2
-    echo "    (unified memory takes ~30 s to come back after a container stops — wait, then retry)" >&2
-  fi
+# --- memory gate (UMA: a serve relaunched seconds after a teardown gets a PHANTOM "CUDA out of memory" — the
+# previous container's GPU pages take ~30-60 s to come back; nothing else is wrong). So after removing old
+# containers we WAIT until both boxes report enough available memory, instead of launching into the race.
+mem_avail() { free -g | awk '/^Mem:/{print $7}'; }
+wait_mem() {  # wait_mem <need GiB> <max seconds>
+  local need=$1 max=$2 t=0 h w
+  while :; do
+    h=$(mem_avail); w=$(ssh_w "free -g | awk '/^Mem:/{print \$7}'" 2>/dev/null || echo 0)
+    if [ "${h:-0}" -ge "$need" ] && [ "${w:-0}" -ge "$need" ]; then
+      echo "  ✓ memory: head ${h}G · worker ${w}G available"; return 0; fi
+    if [ "$t" -ge "$max" ]; then
+      echo "  ✗ still short after ${max}s: head ${h}G · worker ${w}G available (need ${need}G each)." >&2
+      echo "    Another serve on a box? (docker ps on both) — the model needs ~100G per box." >&2; return 1; fi
+    [ "$t" = 0 ] && echo "  · waiting for memory to come back (head ${h}G · worker ${w}G, need ${need}G each)…"
+    sleep 5; t=$((t+5))
+  done
 }
 
 # --- firewall probe (no root) ------------------------------------------------------------------------
@@ -92,4 +102,19 @@ except Exception:
   wait $! 2>/dev/null
   local r; r="$(cat "/tmp/.mbx_fw_$port" 2>/dev/null)"; rm -f "/tmp/.mbx_fw_$port"
   [ "$r" = ok ]
+}
+
+# --- page-cache eviction WITHOUT root -------------------------------------------------------------------
+# On a Spark the GPU driver wants pages that are FREE, not merely "available" (reclaimable page cache). After a
+# few loads the checkpoint's own shards sit in the page cache (60-70 GB) and MemFree drops to ~1 GB while a new
+# load allocates → the driver stalls (a copy that never completes; looks like a hang at 100 % CPU). Root would
+# `echo 3 > drop_caches`; we never ask for root. Instead we drop exactly the files we own from the cache with
+# POSIX_FADV_DONTNEED via GNU dd — any user may do that to a file they can read. Runs on the head locally and on
+# the worker over ssh. Usage: evict_cache <dir>   (all *.safetensors in it)
+EVICT='for f in "$1"/*.safetensors; do dd if="$f" iflag=nocache count=0 status=none 2>/dev/null || true; done; awk "/^MemFree/{printf \"%d\", \$2/1048576}" /proc/meminfo'
+evict_cache() {  # evict_cache <model dir>  → prints "head <free GiB> · worker <free GiB>" after eviction
+  local h w
+  h=$(bash -c "$EVICT" _ "$1")
+  w=$(ssh_w "bash -c '$EVICT' _ '$1'" 2>/dev/null || echo "?")
+  echo "  · page cache: checkpoint files evicted (no root needed) — MemFree now head ${h}G · worker ${w}G"
 }
