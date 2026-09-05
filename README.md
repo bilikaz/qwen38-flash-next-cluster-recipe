@@ -1,6 +1,6 @@
 # Qwen3.8-Flash-Next on two DGX Sparks
 
-**Two boxes, one model, RDMA. 667 tok/s of code at 64 streams (540 averaged over code and thinking), 68 tok/s single-stream. Three commands.**
+**Two boxes, one model, RDMA. Peaks: 77 tok/s single-stream, 721 tok/s at 64 streams (averages 59 and 540 across code and thinking). Three commands.**
 
 Serves [myllmbox/Qwen3.8-Flash-Next-hibrid46](https://huggingface.co/myllmbox/Qwen3.8-Flash-Next-hibrid46)
 — the same 4.35-bit-effective build the [single-Spark kit](https://github.com/bilikaz/qwen38-flash-next-recipe)
@@ -49,21 +49,22 @@ arithmetic mean of the two bands' averages (each band weighs the same), its rang
 Engine steps/s and acceptance are pooled the same way — note the engine speed is identical in both bands; only
 acceptance (tokens per step) differs, 4.2 on code vs 2.7–3.1 on thinking.
 
-| concurrent requests | AVERAGE tok/s (min–max) | AVERAGE per-stream | code tok/s | code per-stream | thinking tok/s | thinking per-stream | engine steps/s | acceptance |
-|---|---|---|---|---|---|---|---|---|
-| 1 | **59** (34–77) | **59.2** | 68.4 | 68.4 | 50.1 | 50.1 | 16.4 (15.3–17.2) | 3.60 (2.19–4.62) |
-| 2 | **99** (61–123) | **49.7** | 118.3 | 59.1 | 80.4 | 40.2 | 13.8 (12.6–14.4) | 3.59 (2.33–4.44) |
-| 4 | **153** (103–195) | **38.2** | 184.7 | 46.2 | 121.3 | 30.3 | 10.7 (9.7–11.3) | 3.56 (2.53–4.48) |
-| 8 | **224** (157–290) | **28.1** | 279.8 | 35.0 | 169.1 | 21.1 | 8.0 (7.3–8.7) | 3.47 (2.55–4.36) |
-| 16 | **322** (229–416) | **20.1** | 395.7 | 24.7 | 247.8 | 15.5 | 5.8 (5.3–6.2) | 3.47 (2.55–4.48) |
-| 24 | **366** (265–475) | **15.3** | 450.2 | 18.8 | 282.3 | 11.8 | 4.4 (4.2–4.6) | 3.47 (2.54–4.50) |
-| 32 | **407** (293–522) | **12.7** | 501.7 | 15.7 | 312.7 | 9.8 | 3.7 (3.4–3.9) | 3.45 (2.56–4.37) |
-| 48 | **493** (364–645) | **10.3** | 600.8 | 12.5 | 384.3 | 8.0 | 3.0 (2.7–3.2) | 3.45 (2.49–4.41) |
-| 52 | **509** (375–661) | **9.8** | 620.2 | 11.9 | 398.3 | 7.7 | 2.8 (2.6–3.0) | 3.46 (2.58–4.41) |
-| 64 | **540** (346–721) | **8.4** | 666.5 | 10.4 | 413.2 | 6.5 | 2.4 (2.1–2.7) | 3.45 (2.55–4.42) |
+| concurrent requests | **PEAK tok/s** | average tok/s | average per-stream | code tok/s (min–max) | thinking tok/s (min–max) | engine steps/s | acceptance |
+|---|---|---|---|---|---|---|---|
+| 1 | **77** | 59 | 59.2 | 68.4 (54.7–77.1) | 50.1 (34.1–71.7) | 16.4 (15.3–17.2) | 3.60 (2.19–4.62) |
+| 2 | **123** | 99 | 49.7 | 118.3 (109.9–123.4) | 80.4 (61.4–107.7) | 13.8 (12.6–14.4) | 3.59 (2.33–4.44) |
+| 4 | **195** | 153 | 38.2 | 184.7 (172.3–195.2) | 121.3 (103.4–156.6) | 10.7 (9.7–11.3) | 3.56 (2.53–4.48) |
+| 8 | **290** | 224 | 28.1 | 279.8 (258.9–289.9) | 169.1 (157.1–194.5) | 8.0 (7.3–8.7) | 3.47 (2.55–4.36) |
+| 16 | **416** | 322 | 20.1 | 395.7 (377.1–415.8) | 247.8 (229.2–267.1) | 5.8 (5.3–6.2) | 3.47 (2.55–4.48) |
+| 24 | **475** | 366 | 15.3 | 450.2 (403.1–474.9) | 282.3 (265.1–296.2) | 4.4 (4.2–4.6) | 3.47 (2.54–4.50) |
+| 32 | **522** | 407 | 12.7 | 501.7 (473.9–522.4) | 312.7 (292.6–333.6) | 3.7 (3.4–3.9) | 3.45 (2.56–4.37) |
+| 48 | **645** | 493 | 10.3 | 600.8 (560.3–644.8) | 384.3 (364.1–423.1) | 3.0 (2.7–3.2) | 3.45 (2.49–4.41) |
+| 52 | **661** | 509 | 9.8 | 620.2 (567.2–660.6) | 398.3 (375.1–466.4) | 2.8 (2.6–3.0) | 3.46 (2.58–4.41) |
+| 64 | **721** | 540 | 8.4 | 666.5 (598.4–721.3) | 413.2 (346.5–494.9) | 2.4 (2.1–2.7) | 3.45 (2.55–4.42) |
 
-Reading it: single-stream 68 tok/s on code, 50 on thinking. At 16 seats every agent still gets 25 tok/s on code
-(20 average). At 64 seats the cluster delivers 667 tok/s of code (540 average) at 10 tok/s each — the same
+Reading it: peaks are what the box touches — 77 tok/s single-stream, 721 tok/s aggregate at 64 seats — and the
+averages are what you should expect: 68 tok/s single-stream on code, 50 on thinking. At 16 seats every agent still
+gets 25 tok/s on code (20 average). At 64 seats the cluster delivers 667 tok/s of code (540 average) at 10 tok/s each — the same
 per-user speed one Spark gives at 32 seats, so **twice the seats at equal speed**. Single Spark, same checkpoint,
 for reference: 44 tok/s at c=1, ~153 at c=8, 305 max at c=32 (code). Acceptance holds 3.45–3.60 average at every
 rung with the same 2.2–4.6 range throughout — speculative decoding does not degrade under load. The engine has a
