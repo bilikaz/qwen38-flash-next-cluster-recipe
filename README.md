@@ -1,7 +1,6 @@
 # Qwen3.8-Flash-Next on two DGX Sparks
 
-**Two boxes, one model, RDMA. Peaks: 80 tok/s single-stream, 674 tok/s at 48 streams (averages 73 and 635 on code).
-26 of 32 boss-level render tests passed. Three commands.**
+Two boxes, one model, RDMA. Peaks: **80 tok/s single-stream**, 674 tok/s at 48 streams (averages **73@c=1 and 635@c=48** on code). 26 of 32 boss-level render tests passed. Three commands.
 
 **v2 (2026-09-06)** serves [myllmbox/Qwen3.8-Flash-Next-hibrid47](https://huggingface.co/myllmbox/Qwen3.8-Flash-Next-hibrid47):
 the hibrid46 body with its 95 GB n-gram (PLE) table re-quantized to NVFP4 and held **resident on the GPU** — no CPU
@@ -51,14 +50,14 @@ seats) — same engine, a few more seats.
 
 | concurrent requests | **PEAK tok/s** | average tok/s | per-stream | engine steps/s (v1 → v2) | acceptance |
 |---|---|---|---|---|---|
-| 1 | **80** | 73 (7 runs, 69–76) | 73 | 16.4 → **17.7** | 4.1 (3.9–4.3) |
+| 1 | **80** | 73 | 73 | 16.4 → **17.7** | 4.1 (3.9–4.3) |
 | 2 | **133** | 126 | 63 | 13.8 → **15.1** | 4.15 |
 | 4 | **209** | 198 | 50 | 10.7 → **11.8** | 4.2 |
 | 8 | **309** | 294 | 37 | 8.0 → **8.8** | 4.16 |
 | 16 | **451** | 417 | 26 | 5.8 → **6.2** | 4.2 |
 | 24 | **514** | 488 | 20 | 4.4 → **4.9** | 4.18 |
 | 32 | **579** | 533 | 17 | 3.7 → **4.0** | 4.19 |
-| 48 | **674** | 635 (599–674, 400 s hold) | 13.2 | 3.0 → **3.2** | 4.18 |
+| 48 | **674** | 635 | 13.2 | 3.0 → **3.2** | 4.18 |
 
 Reading it: the old averages became the new floors — v1 averaged 68 tok/s single-stream, v2's seven runs never went
 below 69. Thinking enabled at 32 streams: 320–340 tok/s (acceptance 2.5 on reasoning prose; the engine speed is the

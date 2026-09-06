@@ -30,20 +30,23 @@ ssh_w "mkdir -p '$MODELS_ABS' '$CACHE_ABS'"
 echo "· image $IMAGE — head"; docker pull -q "$IMAGE" >/dev/null || docker image inspect "$IMAGE" >/dev/null 2>&1 || { echo "✗ cannot pull $IMAGE"; exit 1; }
 echo "· image $IMAGE — worker"; ssh_w "docker pull -q '$IMAGE' >/dev/null || docker image inspect '$IMAGE' >/dev/null 2>&1" || { echo "✗ worker cannot pull $IMAGE"; exit 1; }
 
-# 2. weights: ~91G, resumable — download on the head, then sync to the worker at the SAME path
+# 2. weights: ~99G, resumable — download on the head, then sync to the worker at the SAME path
 if [ ! -f "$MODEL_DIR/model.safetensors.index.json" ]; then
   echo "· downloading $HF_REPO -> $MODEL_DIR"
   if command -v hf >/dev/null; then
     hf download "$HF_REPO" --local-dir "$MODEL_DIR"
   else
     TTY=""; [ -t 1 ] && TTY="-t"
+    # the container runs as root — hand the files back to the host user afterwards (a root-owned .cache/ with 0600
+    # files breaks the rsync to the worker; seen 2026-09-06)
     docker run --rm $TTY -e HF_TOKEN -v "$MODELS_ABS:/dl" --entrypoint python3 "$IMAGE" \
-      -c "from huggingface_hub import snapshot_download; snapshot_download('$HF_REPO', local_dir='/dl/$LOCAL_NAME')"
+      -c "from huggingface_hub import snapshot_download; import subprocess; snapshot_download('$HF_REPO', local_dir='/dl/$LOCAL_NAME'); subprocess.run(['chown', '-R', '$(id -u):$(id -g)', '/dl/$LOCAL_NAME'], check=False)"
   fi
 fi
 if ! ssh_w "[ -f '$MODEL_DIR/model.safetensors.index.json' ]"; then
-  echo "· syncing weights to the worker (one-time, ~91G over ssh — resumable, rerun if interrupted)"
-  rsync -a --size-only --info=progress2 -e "ssh -o BatchMode=yes" "$MODEL_DIR/" "$WORKER:$MODEL_DIR/"
+  echo "· syncing weights to the worker (one-time, ~99G over ssh — resumable, rerun if interrupted)"
+  # .cache/ = huggingface_hub's download bookkeeping; the worker never reads it
+  rsync -a --size-only --info=progress2 --exclude '.cache/' -e "ssh -o BatchMode=yes" "$MODEL_DIR/" "$WORKER:$MODEL_DIR/"
 fi
 echo "✓ weights on both boxes: $MODEL_DIR"
 # The container mounts the kit's models/ folder at /models, nothing else — a symlink for models/<name> would dangle
