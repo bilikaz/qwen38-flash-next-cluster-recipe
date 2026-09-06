@@ -5,13 +5,13 @@
 # worker) and the per-box NCCL/gloo interface pins are added by run.sh from cluster.env — never put them here.
 
 server:
-  image: myllmbox/qwen38-flash-next-cluster-vllm:v2   # pinned public tag, pushed 2026-09-05 (digest sha256:21634ef5…
-                                                      # in README) = the v1 serving image + two patches: PLE offload
-                                                      # worker allowed on nnodes=2; loader drops each shard from the
-                                                      # page cache once consumed (unified-memory stability)
+  image: myllmbox/qwen38-flash-next-cluster-vllm:v3   # pinned public tag (digest in README) = the v1 serving image +
+                                                      # three patches: the NVFP4 n-gram table as a resident GPU
+                                                      # parameter (hibrid47); loader drops each shard from the page
+                                                      # cache once consumed; the int3/offload path kept as fallback
   cpuset: "5-9,15-19"                           # the GB10's 10 Cortex-X925 3.9GHz cores (0-4,10-14 are
                                                 # 2.8GHz A725) — measured +2-3% at every concurrency
-  model: myllmbox/Qwen3.8-Flash-Next-hibrid46   # HF repo — downloaded into ./models on first run (~91G),
+  model: myllmbox/Qwen3.8-Flash-Next-hibrid47   # HF repo — downloaded into ./models on first run (~99G),
                                                 # then synced to the worker at the SAME absolute path
   port: 8000                                    # OpenAI API on the head box
   host: 127.0.0.1                               # the cluster runs on host networking — 127.0.0.1 keeps the API
@@ -21,10 +21,10 @@ server:
   cache_dir: ./cache                            # compile/autotune caches (per box); deletable, first boot rebuilds
 
 env:
-  VLLM_PLE_CPU_OFFLOAD: "1"                     # the vendor's PLE offload switch — the int3 n-gram table lives
-                                                # in a CPU worker (unified memory, ~18G) — required
-  MBX_PLE_MULTINODE: "1"                        # this image's patch: one full-table worker PER BOX (upstream
-                                                # refuses offload at nnodes=2 without it)
+  # The n-gram (PLE) table is an ordinary GPU parameter in hibrid47 — no offload worker.
+  MBX_PLE_REPLICATE: "1"                        # the FULL table on each box (28.6G, no per-step exchange) — the
+                                                # layout every v2 number was measured on. Unset = half per box
+                                                # (14G less per box → room for a 40G KV pin; steps within 1 %)
   OMP_NUM_THREADS: "8"                          # matched to the 10-core pin
   MBX_VOCAB_GEMV: "1"                           # measured +5.5% steps
   VLLM_MARLIN_USE_ATOMIC_ADD: "1"               # Marlin small-N fast path (self-gating)
@@ -44,13 +44,14 @@ vllm:
   served-model-name: Qwen/Qwen3.8-Flash-Next
   pipeline-parallel-size: 1                     # TP only (TP=2 is set by run.sh = box count)
   distributed-executor-backend: mp              # required — PLE worker spawn; no Ray
-  gpu-memory-utilization: 0.70
-  kv-cache-memory: "46000000000"                # 46G per box = ~3.1M pooled KV tokens (KV is split across the
-                                                # two boxes). vLLM's "fit" figure at 0.70 was 39G; 46 leaves
-                                                # ~11G host headroom per box — do not take the "fully utilize" 64G
+  gpu-memory-utilization: 0.70                  # with kv-cache-memory pinned this does not size the KV pool (verified:
+                                                # 65G of weights + the pin boot fine at 0.70)
+  kv-cache-memory: "28000000000"                # 28G per box = 1.71M pooled KV tokens (KV is split across the two
+                                                # boxes); 48 streams fill it over a 400 s hold. Leaves ~5G host headroom per box after graph
+                                                # capture — do not take vLLM's "fully utilize" figure
   max-model-len: 262144                         # the model's native max
-  max-num-seqs: 64                              # measured: 667 tok/s code / 540 avg aggregate at 64 streams;
-                                                # 52 and 64 are the efficient tops (56/60 pay a 64-sized step)
+  max-num-seqs: 48                              # the seat ceiling: 48 streams reach 98.9 % of the 28G pool in 400 s
+                                                # (fewer seats = longer holds before preemption)
   max-num-batched-tokens: 8192                  # also the image-input encoder budget — keep for image requests
   enable-prefix-caching: true
   enable-auto-tool-choice: true

@@ -86,6 +86,7 @@ compose() {  # compose <rank> <iface> <ic-ip> <hca> <has-rdma yes|no>  → print
 HEAD_RDMA=$([ -d /dev/infiniband ] && echo yes || echo no)
 WORKER_RDMA=$(ssh_w "[ -d /dev/infiniband ] && echo yes || echo no")
 [ "$HEAD_RDMA$WORKER_RDMA" = yesyes ] || echo "  ⚠ RDMA not available on both boxes (head $HEAD_RDMA, worker $WORKER_RDMA) — running NCCL over TCP"
+compaction_check
 
 # 5. launch: clear old containers, then GATE on memory (unified memory needs ~30-60 s after a container dies;
 #    launching earlier = a phantom CUDA OOM), then HEAD first (the rendezvous master), then the worker — the order

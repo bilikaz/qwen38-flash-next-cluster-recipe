@@ -118,3 +118,19 @@ evict_cache() {  # evict_cache <models dir>  (every checkpoint under it) → pri
   w=$(ssh_w "bash -c '$EVICT' _ '$1'" 2>/dev/null || echo "?")
   echo "  · page cache: checkpoint files evicted (no root needed) — MemFree now head ${h}G · worker ${w}G"
 }
+
+# --- kernel page compaction (read-only check; the fix needs root → ./tune-host.sh) -----------------------------
+# vm.compaction_proactiveness (default 20) lets the kernel migrate pages in the background to build huge blocks.
+# On a Spark the GPU's memory IS those pages: on a tightly pinned serve it measured as a 4–5 s slowdown every ~37 s
+# (~10 % of throughput). A serving box allocates once at boot and gains nothing from it. Reading needs no privilege.
+compaction_check() {
+  local h w
+  h=$(cat /proc/sys/vm/compaction_proactiveness 2>/dev/null || echo "?")
+  w=$(ssh_w "cat /proc/sys/vm/compaction_proactiveness" 2>/dev/null || echo "?")
+  if [ "$h" != 0 ] || [ "$w" != 0 ]; then
+    echo "  ⚠ vm.compaction_proactiveness is ${h} on the head, ${w} on the worker (want 0): expect ~10 % lower throughput"
+    echo "    and periodic 4-5 s stalls under load. One-time fix, needs sudo, shows what it runs first:  ./tune-host.sh"
+  else
+    echo "  ✓ vm.compaction_proactiveness=0 on both boxes"
+  fi
+}

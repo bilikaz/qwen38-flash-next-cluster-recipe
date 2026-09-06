@@ -1,20 +1,21 @@
 # Qwen3.8-Flash-Next on two DGX Sparks
 
-**Two boxes, one model, RDMA. Peaks: 77 tok/s single-stream, 721 tok/s at 64 streams (averages 59 and 540 across code and thinking). Three commands.**
+**Two boxes, one model, RDMA. Peaks: 80 tok/s single-stream, 674 tok/s at 48 streams (averages 73 and 635 on code).
+26 of 32 boss-level render tests passed. Three commands.**
 
-Serves [myllmbox/Qwen3.8-Flash-Next-hibrid46](https://huggingface.co/myllmbox/Qwen3.8-Flash-Next-hibrid46)
-— the same 4.35-bit-effective build the [single-Spark kit](https://github.com/bilikaz/qwen38-flash-next-recipe)
-serves — split tensor-parallel across **two NVIDIA DGX Sparks (GB10, 119G unified memory each)** over their
-ConnectX link, NCCL on RDMA. What the second box buys, measured on this exact kit: **+35–40% engine speed at every
-concurrency** (per-step weight traffic halves) and **2× the seats** at equal per-stream speed. Not 2× single-stream:
-a Spark pair adds one interconnect round trip per layer, and the numbers below say what is left after paying it.
+**v2 (2026-09-06)** serves [myllmbox/Qwen3.8-Flash-Next-hibrid47](https://huggingface.co/myllmbox/Qwen3.8-Flash-Next-hibrid47):
+the hibrid46 body with its 95 GB n-gram (PLE) table re-quantized to NVFP4 and held **resident on the GPU** — no CPU
+offload worker, no per-step detour — split tensor-parallel across **two NVIDIA DGX Sparks (GB10, 119G unified memory
+each)** over their ConnectX link, NCCL on RDMA. Against v1 (the int3 table in a CPU worker, same boxes, same tests):
+**+7–11 % engine steps on every concurrency** and a table that draws 26 of 32 boss scenes where int3 drew half.
+v1 stays available: `git checkout v1` in this repo (image `…-cluster-vllm:v2`, checkpoint hibrid46).
 
 ## Quick start
 
 ```bash
 git clone https://github.com/bilikaz/qwen38-flash-next-cluster-recipe.git
 cd qwen38-flash-next-cluster-recipe
-./run.sh        # first run: sets the cluster up (asks for the 2nd box), downloads ~91G, syncs it, serves on :8000
+./run.sh        # first run: sets the cluster up (asks for the 2nd box), downloads ~99G, syncs it, serves on :8000
 ```
 
 `./stop.sh` stops both boxes. `./view.sh` shows live stats plus the RDMA proof. Requirements: two DGX Sparks
@@ -41,16 +42,37 @@ curl http://127.0.0.1:8000/v1/chat/completions -H 'Content-Type: application/jso
 }'
 ```
 
-## Measured performance (this exact kit, 2× DGX Spark, RDMA, K=4)
+## Measured performance (this exact stack, 2× DGX Spark, RDMA, K=4, `vm.compaction_proactiveness=0`)
 
-65 runs, 1,994 steady 10-second engine windows (all streams running, zero prefill in the window), the myllmbox
-"pasture" prompt in both bands: **code** = thinking disabled, **thinking** = thinking enabled. AVERAGE is the
-arithmetic mean of the two bands' averages (each band weighs the same), its range the extremes either band reported.
-Engine steps/s and acceptance are pooled the same way — note the engine speed is identical in both bands; only
-acceptance (tokens per step) differs, 4.2 on code vs 2.7–3.1 on thinking.
+Boot 2026-09-06 (fresh reboot), myllmbox "pasture" prompt, thinking disabled; each row is 3–7 independent runs of
+steady 10-second engine windows (all streams running, zero prefill in the window); **peak** = the best steady window.
+Measured on the layout this kit ships (full table per box) at a 25G KV pin; the kit pins 28G (1.71M pooled tokens, ~55
+seats) — same engine, a few more seats.
+
+| concurrent requests | **PEAK tok/s** | average tok/s | per-stream | engine steps/s (v1 → v2) | acceptance |
+|---|---|---|---|---|---|
+| 1 | **80** | 73 (7 runs, 69–76) | 73 | 16.4 → **17.7** | 4.1 (3.9–4.3) |
+| 2 | **133** | 126 | 63 | 13.8 → **15.1** | 4.15 |
+| 4 | **209** | 198 | 50 | 10.7 → **11.8** | 4.2 |
+| 8 | **309** | 294 | 37 | 8.0 → **8.8** | 4.16 |
+| 16 | **451** | 417 | 26 | 5.8 → **6.2** | 4.2 |
+| 24 | **514** | 488 | 20 | 4.4 → **4.9** | 4.18 |
+| 32 | **579** | 533 | 17 | 3.7 → **4.0** | 4.19 |
+| 48 | **674** | 635 (599–674, 400 s hold) | 13.2 | 3.0 → **3.2** | 4.18 |
+
+Reading it: the old averages became the new floors — v1 averaged 68 tok/s single-stream, v2's seven runs never went
+below 69. Thinking enabled at 32 streams: 320–340 tok/s (acceptance 2.5 on reasoning prose; the engine speed is the
+same, the text decides how many tokens each step yields). Per-position draft acceptance on prose, single stream:
+0.91 / 0.85 / 0.80 / 0.71. **Quality:** 32 boss-animals renders at 32 streams, thinking on — 26 good, 3 partial,
+3 broken; v1 scored about half/half on the same scenes. Full 262,144-token context; the 28G-per-box KV pool holds
+1.71M pooled tokens, ~1.15 % of it per running request (the model's fixed GDN state), and 48 streams fill it (a 400 s hold at 48 ended at 98.9 % of the pool; rungs 1–32 were measured at a
+25G pin, c=48 at this kit's 28G). Numbers carry
+their conditions on purpose — the tools that produced them (`bench/test.py`, `bench/summary.py`, `bench/accept.py`
+in the myllmbox repo) are yours to rerun.
+
+<details><summary><b>v1 for reference</b> — int3 table in a CPU worker, kv 46G, boot 2026-09-05 (65 runs, 1,994 windows; <code>git checkout v1</code>)</summary>
 
 | concurrent requests | **PEAK tok/s** | average tok/s | average per-stream | code tok/s (min–max) | thinking tok/s (min–max) | engine steps/s | acceptance |
-|---|---|---|---|---|---|---|---|
 | 1 | **77** | 59 | 59.2 | 68.4 (54.7–77.1) | 50.1 (34.1–71.7) | 16.4 (15.3–17.2) | 3.60 (2.19–4.62) |
 | 2 | **123** | 99 | 49.7 | 118.3 (109.9–123.4) | 80.4 (61.4–107.7) | 13.8 (12.6–14.4) | 3.59 (2.33–4.44) |
 | 4 | **195** | 153 | 38.2 | 184.7 (172.3–195.2) | 121.3 (103.4–156.6) | 10.7 (9.7–11.3) | 3.56 (2.53–4.48) |
@@ -62,17 +84,8 @@ acceptance (tokens per step) differs, 4.2 on code vs 2.7–3.1 on thinking.
 | 52 | **661** | 509 | 9.8 | 620.2 (567.2–660.6) | 398.3 (375.1–466.4) | 2.8 (2.6–3.0) | 3.46 (2.58–4.41) |
 | 64 | **721** | 540 | 8.4 | 666.5 (598.4–721.3) | 413.2 (346.5–494.9) | 2.4 (2.1–2.7) | 3.45 (2.55–4.42) |
 
-Reading it: peaks are what the box touches — 77 tok/s single-stream, 721 tok/s aggregate at 64 seats — and the
-averages are what you should expect: 68 tok/s single-stream on code, 50 on thinking. At 16 seats every agent still
-gets 25 tok/s on code (20 average). At 64 seats the cluster delivers 667 tok/s of code (540 average) at 10 tok/s each — the same
-per-user speed one Spark gives at 32 seats, so **twice the seats at equal speed**. Single Spark, same checkpoint,
-for reference: 44 tok/s at c=1, ~153 at c=8, 305 max at c=32 (code). Acceptance holds 3.45–3.60 average at every
-rung with the same 2.2–4.6 range throughout — speculative decoding does not degrade under load. The engine has a
-batch-size step between 52 and 56 sequences (56 and 60 cost a 64-sized step): 52 and 64 are the efficient seat
-counts at the top. Full 262,144-token context; the 46G-per-box KV pool holds ~3.1M pooled tokens, ~1.15 % of it per
-running request (the model's fixed GDN state), so ~85 seats is the pool's ceiling. Numbers carry their conditions
-on purpose — the tools that produced them (`bench/test.py`, `bench/summary.py` in the myllmbox repo) are yours to
-rerun.
+AVERAGE = (code avg + thinking avg) / 2, range = extremes of either band.
+</details>
 
 ## The RDMA part (why the numbers are what they are)
 
@@ -98,16 +111,37 @@ boot looks hung at 100 % CPU. The kit never asks for your password; it stabilise
 
 Nothing to do on your side.
 
+One thing you *can* do, with root, and it is worth ~10 % on a serve that runs this close to the memory edge:
+
+```
+./tune-host.sh      # sets vm.compaction_proactiveness=0 on both boxes; shows the two commands, asks, then sudo prompts
+```
+
+`run.sh` checks the value on both boxes before every launch (reading needs no privilege) and prints a one-line
+warning while it is not 0; it never applies it for you.
+
+The kernel's background page compactor wakes on a low-free-memory box and migrates pages to build large
+contiguous blocks. On a Spark the GPU's memory *is* those pages, so every migration first unmaps them from the
+GPU: measured as a 4–5 s slowdown every ~37 s (the compactor's retry cycle), both GPUs idling together, no swap,
+no clock change. A serving box allocates once at boot and gains nothing from the upkeep. The kit never runs
+this for you (it needs root); it takes effect immediately, no restart.
+
 ## Tuning (recipe.yaml)
 
-- **`kv-cache-memory`** (bytes, per box): 46G default. vLLM's own "fit" figure at util 0.70 is 39G; 46 leaves
-  ~11G of host headroom per box. Do **not** take its "fully utilize" suggestion (~64G): that ignores the 18G
-  n-gram table living in the CPU worker and the OS, and unified memory over-commit has needed a power cycle.
-  KV must stay **bf16** on this model (the vendor's QSA guard refuses fp8).
-- **`max-num-seqs`**: 64 measured, aggregate still climbing. KV usage is ~1.15% per running request
-  regardless of length (the model's fixed GDN state), so the 46G pool tops out near 85 seats.
-- **`speculative-config`** K=4: acceptance 4.2–4.6 with the cap at 5.0, ~8% step cost vs K=3, net faster at
-  every concurrency. K=3 was 18 steps/s single-stream if you want to compare.
+- **`kv-cache-memory`** (bytes, per box): 28G default with the full table on each box (~65G of weights per box).
+  Leaves ~5G of host headroom per box after graph capture — check `free -g` on both boxes after the first boot and
+  back off to 25G if either shows swap in use. Do **not** take vLLM's "fully utilize" suggestion: unified memory
+  over-commit has needed a power cycle. KV must stay **bf16** on this model (the vendor's QSA guard refuses fp8).
+- **`MBX_PLE_REPLICATE: "1"`** (env): the full table on each box, no per-step exchange — the layout the numbers were
+  measured on. Unset it for half the table per box: 14G freed per box, so the pin can go to 40G (~80 seats) at
+  engine steps within 1 % — measure before you publish numbers from it.
+- **`gpu-memory-utilization`** 0.70: with the pin set it does not size the KV pool (verified: 65G of weights plus the
+  pin boot at 0.70).
+- **`max-num-seqs`**: 48. KV usage is ~1.15 % per running request regardless of length (the model's fixed GDN
+  state) plus the growing cache; a 400 s hold at 48 streams filled 98.9 % of the 28G pool, so 48 is the ceiling of
+  this pin, not a bucket below it. Fewer seats = longer holds before preemption.
+- **`speculative-config`** K=4: acceptance ~4.2 on code and prose, ~2.5 on long reasoning, cap 5.0. A bf16 drafter
+  was A/B'd and rejected (acceptance +0.01, −3 % steps, +3.4G) — the drafter's precision is not what bounds acceptance.
 - **`max-num-batched-tokens`**: also the image-input encoder budget — 8192 fits realistic multi-image requests.
 - **`host: 127.0.0.1`**: the cluster runs on host networking, so the API would otherwise be on every interface.
   Set `0.0.0.0` to expose it on the LAN.
@@ -116,20 +150,22 @@ Nothing to do on your side.
 
 ## What's in the image
 
-`myllmbox/qwen38-flash-next-cluster-vllm:v2` (pushed 2026-09-05) — the single-Spark kit's image
-(`myllmbox/qwen38-flash-next-vllm:v1`, vendor SM121 vLLM + the int3 n-gram-table loader patch) plus **two more
-readable patches**:
+`myllmbox/qwen38-flash-next-cluster-vllm:v3` — the single-Spark kit's image (`myllmbox/qwen38-flash-next-vllm:v1`,
+vendor SM121 vLLM + the int3 n-gram-table loader patch) plus **three readable patches**:
 
-1. upstream vLLM refuses its PLE CPU-offload worker when `nnodes != 1`; the patch (gated by `MBX_PLE_MULTINODE=1`)
-   runs one full-table worker per box and lets each rank feed its own. Six anchored edits in `gpu_worker.py`,
-   `ple_offload/worker.py`, `ple_offload/connector.py`.
+1. **the n-gram table as a GPU parameter** (`03-ple-gpu-nvfp4.py`): when the checkpoint declares its table as NVFP4
+   (hibrid47 does, in `config.json`), the table loads as an ordinary resident parameter — half the rows per box, or
+   all of them with `MBX_PLE_REPLICATE=1` — and is gathered and dequantized inside the model's forward pass, inside
+   the CUDA graphs. The converter that made the checkpoint (`make-hibrid47.py`) ships in the image at `/opt/mbx/`.
 2. the safetensors loader drops each shard's pages from the page cache as soon as its tensors are consumed
    (`POSIX_FADV_DONTNEED`, gate `MBX_LOAD_DROP_CACHE=0` to disable) — see "Memory on a Spark" above.
+3. the v1 path, kept as a fallback: upstream vLLM refuses its PLE CPU-offload worker when `nnodes != 1`; gated by
+   `MBX_PLE_MULTINODE=1` (unset here), one full-table worker per box. Inert unless you serve an int3 checkpoint.
 
-Each patch refuses to apply twice and fails the build if its anchor moved. The Dockerfile, the patch scripts and
-the build ledger live in the myllmbox repo under
+Each patch refuses to apply twice and fails the build if its anchor moved. The Dockerfile, the patch scripts, the
+converter and the build ledger live in the myllmbox repo under
 [`builds/qwen38-flash-next/cluster/`](https://github.com/bilikaz/myllmbox-runner/tree/main/builds/qwen38-flash-next/cluster)
-— rebuild and diff it yourself. Digest: `sha256:21634ef576ac5a185327d548c410931a79e64f217074421e28b569d76108c1b2`.
+— rebuild and diff it yourself. Digest: `sha256:ba28f473c766919afac75a898014d1dbe18a0929a7f55c0588512f27ee365513`.
 
 ## The full box
 
