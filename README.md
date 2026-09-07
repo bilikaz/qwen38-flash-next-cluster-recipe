@@ -95,13 +95,6 @@ proves it by sampling the HCA's port counter against the interface's TCP byte co
 (RDMA moving, TCP flat = good). If `/dev/infiniband` is missing on a box (`rdma-core` not installed, or the link
 is not a ConnectX one), the kit still runs, over TCP, and says so.
 
-The card itself has two halves. A Spark's ConnectX-7 hangs off two PCIe Gen5 x4 links and shows up as two RDMA
-devices (`rocep1s0f1` and `roceP2p1s0f1`), each capped near 13 GB/s by its own PCIe link. `setup.sh` finds the second
-one; if its interface has an IPv4 on both boxes it writes both devices into `cluster.env` and `run.sh` stripes NCCL over
-them (`NCCL_IB_QPS_PER_CONNECTION=4`, `NCCL_IB_SPLIT_DATA_ON_QPS=1`). If not, it prints the one root command that gives
-the interface an address (NetworkManager link-local, persistent) and pins the half that works — a listed device without
-an address fails NCCL at init. `run.sh` re-validates every listed device (ACTIVE, addressed) before each launch.
-
 ## Memory on a Spark: what the kit does about it
 
 Unified memory means the GPU driver and the page cache share one pool, and the driver wants pages that are

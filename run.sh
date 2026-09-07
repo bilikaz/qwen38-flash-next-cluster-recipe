@@ -80,10 +80,6 @@ compose() {  # compose <rank> <iface> <ic-ip> <hca> <has-rdma yes|no>  → print
       -e FLASHINFER_WORKSPACE_BASE=/cache/flashinfer-workspace -e VLLM_CACHE_ROOT=/cache/vllm-cache
       -e "NCCL_SOCKET_IFNAME=$iface" -e "GLOO_SOCKET_IFNAME=$iface" -e "VLLM_HOST_IP=$ic" -e NCCL_IB_DISABLE=0)
   [ -n "$hca" ] && a+=(-e "NCCL_IB_HCA=$hca")
-  # two devices = the two PCIe halves of one card: NCCL only spreads a connection over both with several queue pairs
-  # per connection and the data split across them (recipe.yaml env wins — docker takes the last -e)
-  case "$hca" in *,*) for kv in NCCL_IB_QPS_PER_CONNECTION=4 NCCL_IB_SPLIT_DATA_ON_QPS=1 NCCL_CROSS_NIC=1; do
-      grep -q "^  ${kv%%=*}:" recipe.yaml || a+=(-e "$kv"); done;; esac
   a+=("${ENVS[@]}" --entrypoint vllm "$IMAGE" serve "/models/$LOCAL_NAME" --host "$HOST" --port "$PORT"
       --nnodes 2 --node-rank "$rank" --master-addr "$HEAD_IC" --master-port "$MPORT" --tensor-parallel-size 2)
   [ "$rank" != 0 ] && a+=(--headless)
@@ -93,11 +89,6 @@ compose() {  # compose <rank> <iface> <ic-ip> <hca> <has-rdma yes|no>  → print
 HEAD_RDMA=$([ -d /dev/infiniband ] && echo yes || echo no)
 WORKER_RDMA=$(ssh_w "[ -d /dev/infiniband ] && echo yes || echo no")
 [ "$HEAD_RDMA$WORKER_RDMA" = yesyes ] || echo "  ⚠ RDMA not available on both boxes (head $HEAD_RDMA, worker $WORKER_RDMA) — running NCCL over TCP"
-# every listed RDMA device must be ACTIVE with an IPv4 on both boxes — otherwise NCCL dies at init with an opaque error
-if [ -n "$HEAD_HCA" ] || [ -n "$WORKER_HCA" ]; then
-  hca_validate head "$HEAD_HCA" && hca_validate worker "$WORKER_HCA" || { echo "✗ RDMA pre-flight failed — fix the box or rerun ./setup.sh (re-validates every link)"; exit 1; }
-  echo "  ✓ RDMA: head $HEAD_HCA · worker $WORKER_HCA (ACTIVE, addressed)"
-fi
 compaction_check
 
 # 5. launch: clear old containers, then GATE on memory (unified memory needs ~30-60 s after a container dies;

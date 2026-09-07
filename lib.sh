@@ -58,35 +58,6 @@ probe() {  # probe [user@host]
 pfield() { echo "$1" | awk -v k="$2" '$1==k {$1=""; sub(/^ /,""); print; exit}'; }   # pfield "<probe out>" GPU
 route_dev() { ip -o route get "$1" 2>/dev/null | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -1; }   # local iface that reaches an IP
 
-# --- the other PCIe half of the RDMA card -------------------------------------------------------------------
-# A DGX Spark's ConnectX-7 sits on two PCIe Gen5 x4 links and shows as TWO verbs devices (rocep1s0f1 + roceP2p1s0f1),
-# ~13 GB/s each; NCCL striped over both ≈ 20 GB/s. Emits "SIB <hca> <netdev> <ipv4|->" for every other ACTIVE device of
-# the same port speed. Usage: hca_siblings head|worker <hca>
-HCA_SIB='h="$1"; rt=$(cat /sys/class/infiniband/$h/ports/1/rate 2>/dev/null | awk "{print \$1}")
-for d in /sys/class/infiniband/*; do n=$(basename $d); [ "$n" = "$h" ] && continue
-  st=$(cat $d/ports/1/state 2>/dev/null | awk "{print \$2}"); r=$(cat $d/ports/1/rate 2>/dev/null | awk "{print \$1}")
-  [ "$st" = ACTIVE ] && [ "$r" = "$rt" ] || continue
-  nd=$(ls $d/device/net 2>/dev/null | head -1); ip=$(ip -4 -o addr show "$nd" 2>/dev/null | awk "{print \$4}" | head -1)
-  echo "SIB $n ${nd:--} ${ip:--}"; done'
-hca_siblings() {  # head|worker <hca>
-  if [ "$1" = head ]; then bash -c "$HCA_SIB" _ "$2"; else ssh_w "bash -c $(printf %q "$HCA_SIB") _ $(printf %q "$2")"; fi
-}
-# "<state> <ipv4|->" of one HCA on a box (its port state and its netdev's address). Usage: hca_state head|worker <hca>
-HCA_ST='h="$1"; st=$(cat /sys/class/infiniband/$h/ports/1/state 2>/dev/null | awk "{print \$2}"); nd=$(ls /sys/class/infiniband/$h/device/net 2>/dev/null | head -1)
-ip=$(ip -4 -o addr show "$nd" 2>/dev/null | awk "{print \$4}" | head -1); echo "${st:-MISSING} ${nd:--} ${ip:--}"'
-hca_state() { if [ "$1" = head ]; then bash -c "$HCA_ST" _ "$2"; else ssh_w "bash -c $(printf %q "$HCA_ST") _ $(printf %q "$2")"; fi; }
-# Every HCA in a comma list must be ACTIVE with an IPv4 on its netdev (RoCE v2 GIDs come from the address; a listed
-# device without one fails NCCL init with "unhandled system error"). Usage: hca_validate head|worker "<a,b>"
-hca_validate() {
-  local box="$1" list="$2" h st nd ip ok=0
-  for h in ${list//,/ }; do
-    read -r st nd ip < <(hca_state "$box" "$h")
-    if [ "$st" != ACTIVE ]; then echo "  ✗ $box: RDMA device $h is $st (want ACTIVE)"; ok=1
-    elif [ "$ip" = "-" ]; then echo "  ✗ $box: $h is ACTIVE but $nd has no IPv4 — RoCE v2 needs one. Rerun ./setup.sh (it shows the one root command)"; ok=1; fi
-  done
-  return $ok
-}
-
 # --- memory gate (UMA: a serve relaunched seconds after a teardown gets a PHANTOM "CUDA out of memory" — the
 # previous container's GPU pages take ~30-60 s to come back; nothing else is wrong). So after removing old
 # containers we WAIT until both boxes report enough available memory, instead of launching into the race.

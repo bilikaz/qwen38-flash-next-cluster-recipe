@@ -93,26 +93,6 @@ HEAD_IFACE=$1; HEAD_IC=$2; HEAD_HCA=$3; WORKER_IFACE=$4; WORKER_IC=$5; WORKER_HC
 [ "$HEAD_HCA" = - ] && HEAD_HCA=""; [ "$WORKER_HCA" = - ] && WORKER_HCA=""
 echo "✓ interconnect: head $HEAD_IFACE $HEAD_IC${HEAD_HCA:+ (RDMA $HEAD_HCA)} ⇄ worker $WORKER_IFACE $WORKER_IC${WORKER_HCA:+ (RDMA $WORKER_HCA)}"
 [ -n "$HEAD_HCA" ] && [ -n "$WORKER_HCA" ] || echo "  ⚠ no RDMA device on this link — NCCL runs over TCP sockets (works, ~2x slower per step)"
-# 4b. the second PCIe half of the card. Both boxes need it ACTIVE with an IPv4 before NCCL may use it; then the pair
-#     goes into cluster.env as a comma list and run.sh stripes NCCL over both (~13 → ~20 GB/s). Otherwise: say exactly
-#     what to do (root, once per box — this script never runs it) and pin the one device that works.
-WORKER="$W"
-if [ -n "$HEAD_HCA" ] && [ -n "$WORKER_HCA" ]; then
-  read -r _ HSIB HSND HSIP < <(hca_siblings head "$HEAD_HCA" | grep '^SIB ' | head -1 || true)
-  read -r _ WSIB WSND WSIP < <(hca_siblings worker "$WORKER_HCA" | grep '^SIB ' | head -1 || true)
-  if [ -n "${HSIB:-}" ] && [ -n "${WSIB:-}" ]; then
-    if [ "${HSIP:-"-"}" != "-" ] && [ "${WSIP:-"-"}" != "-" ]; then
-      HEAD_HCA="$HEAD_HCA,$HSIB"; WORKER_HCA="$WORKER_HCA,$WSIB"
-      echo "✓ both PCIe halves of the card have an address — head $HEAD_HCA ⇄ worker $WORKER_HCA (NCCL stripes over both)"
-    else
-      echo "  ⚠ each card has a second PCIe half (head $HSIB on $HSND, worker $WSIB on $WSND) — ~13 GB/s more, unused until its"
-      echo "    interface has an IPv4 on BOTH boxes. Root, once, on each box that shows '-' below, then rerun ./setup.sh:"
-      echo "      head   $HSND ${HSIP:-"-"}   worker $WSND ${WSIP:-"-"}"
-      echo "      sudo nmcli con mod \"\$(nmcli -t -f NAME,DEVICE con show | grep ':<iface>\$' | cut -d: -f1)\" ipv4.method link-local ipv6.method disabled"
-      echo "      sudo nmcli con up  \"\$(nmcli -t -f NAME,DEVICE con show | grep ':<iface>\$' | cut -d: -f1)\""
-    fi
-  fi
-fi
 
 # 5. firewall — test the EFFECT without root: can each box reach the other over the interconnect on a high port?
 #    (a throwaway listener + one connect; ufw rules are per source IP so one port proves them all). Only a box that
@@ -145,7 +125,7 @@ cat > "$CLUSTER_ENV" <<EOF
 # written by setup.sh $(date '+%Y-%m-%d %H:%M') — this cluster (machine-specific, gitignored). Rerun ./setup.sh to redo.
 HEAD_IC=$HEAD_IC            # head interconnect IP (NCCL/gloo/rendezvous bind here)
 HEAD_IFACE=$HEAD_IFACE
-HEAD_HCA=$HEAD_HCA          # RDMA device(s) on the head's link, comma list = both PCIe halves ('' = TCP)
+HEAD_HCA=$HEAD_HCA          # RDMA device on the head's link ('' = TCP)
 WORKER_HOST=$WORKER_HOST    # worker ssh address (control plane)
 WORKER_USER=$WORKER_USER
 WORKER_IC=$WORKER_IC        # worker interconnect IP
