@@ -84,9 +84,18 @@ if [ "${#LINKS[@]}" -eq 0 ]; then
 elif [ "${#LINKS[@]}" -eq 1 ]; then
   PICK="${LINKS[0]}"
 else
+  # several links whose RDMA devices are all halves of ONE card per box = one link; take the first, no question.
+  set -- ${LINKS[0]}; H0=$3; W0=$6; ONE=1
+  if [ "$H0" != - ] && [ "$W0" != - ]; then
+    HS="$(bash -c "$HCA_SIB" _ "$H0" | awk '{print $2}')"; WS="$(ssh -o BatchMode=yes "$W" "bash -c $(printf %q "$HCA_SIB") _ $(printf %q "$W0")" | awk '{print $2}')"
+    for l in "${LINKS[@]:1}"; do set -- $l
+      { [ "$3" = "$H0" ] || echo "$HS" | grep -qx "$3"; } && { [ "$6" = "$W0" ] || echo "$WS" | grep -qx "$6"; } || ONE=0; done
+  else ONE=0; fi
+  if [ "$ONE" = 1 ]; then PICK="${LINKS[0]}"; echo "  ${#LINKS[@]} links = the PCIe halves of one card per box — one link; using the first"; else
   echo "  several links — pick the one to use (a dedicated ConnectX link beats a shared switch):"
   for i in "${!LINKS[@]}"; do echo "    [$((i+1))] ${LINKS[$i]}"; done
   read -rp "  choice [1]: " sel; PICK="${LINKS[$(( ${sel:-1} - 1 ))]}"
+  fi
 fi
 set -- $PICK
 HEAD_IFACE=$1; HEAD_IC=$2; HEAD_HCA=$3; WORKER_IFACE=$4; WORKER_IC=$5; WORKER_HCA=$6
