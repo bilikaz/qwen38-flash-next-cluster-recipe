@@ -5,10 +5,11 @@
 # worker) and the per-box NCCL/gloo interface pins are added by run.sh from cluster.env — never put them here.
 
 server:
-  image: myllmbox/qwen38-flash-next-cluster-vllm:v3   # pinned public tag (digest in README) = the v1 serving image +
-                                                      # three patches: the NVFP4 n-gram table as a resident GPU
-                                                      # parameter (hibrid47); loader drops each shard from the page
-                                                      # cache once consumed; the int3/offload path kept as fallback
+  image: myllmbox/qwen38-flash-next-cluster-vllm:v4   # pinned public tag (digest in README) = the v1 serving image +
+                                                      # four patches: the NVFP4 n-gram table as a resident GPU
+                                                      # parameter (hibrid47); fp8 KV on the QSA path (upstream PR
+                                                      # #54846 ported); loader drops each shard from the page cache
+                                                      # once consumed; the int3/offload path kept as fallback
   cpuset: "5-9,15-19"                           # the GB10's 10 Cortex-X925 3.9GHz cores (0-4,10-14 are
                                                 # 2.8GHz A725) — measured +2-3% at every concurrency
   model: myllmbox/Qwen3.8-Flash-Next-hibrid47   # HF repo — downloaded into ./models on first run (~99G),
@@ -46,12 +47,17 @@ vllm:
   distributed-executor-backend: mp              # required — PLE worker spawn; no Ray
   gpu-memory-utilization: 0.70                  # with kv-cache-memory pinned this does not size the KV pool (verified:
                                                 # 65G of weights + the pin boot fine at 0.70)
-  kv-cache-memory: "28000000000"                # 28G per box = 1.71M pooled KV tokens (KV is split across the two
-                                                # boxes); 48 streams fill it over a 400 s hold. Leaves ~5G host headroom per box after graph
-                                                # capture — do not take vLLM's "fully utilize" figure
+  kv-cache-memory: "28000000000"                # 28G per box = 2.85M pooled KV tokens in fp8 (1.71M was bf16; KV is
+                                                # split across the two boxes). Leaves ~5G host headroom per box after
+                                                # graph capture — do not take vLLM's "fully utilize" figure
+  kv-cache-dtype: fp8                           # v2.1: fp8_e4m3 KV on the QSA path (image patch 04). 1.66× the tokens
+                                                # on the same pin; the GDN state stays as the model ships it
   max-model-len: 262144                         # the model's native max
-  max-num-seqs: 48                              # the seat ceiling: 48 streams reach 98.9 % of the 28G pool in 400 s
-                                                # (fewer seats = longer holds before preemption)
+  max-num-seqs: 32                              # 32 seats × ~89k tokens of pool each (2.85M / 32), 17 tok/s per
+                                                # stream. Each running request also pins ~1.9 % of the pool at
+                                                # admission (the model's GDN recurrent state, 36 layers × (2+K)
+                                                # blocks — fp8 KV does not shrink it), so ~52 is the hard ceiling;
+                                                # 48 seats ran at 13 tok/s each and left ~3k tokens of pool per seat
   max-num-batched-tokens: 8192                  # also the image-input encoder budget — keep for image requests
   enable-prefix-caching: true
   enable-auto-tool-choice: true
