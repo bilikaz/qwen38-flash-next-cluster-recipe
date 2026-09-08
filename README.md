@@ -161,7 +161,8 @@ vendor SM121 vLLM + the int3 n-gram-table loader patch) plus **four readable pat
 3. the v1 path, kept as a fallback: upstream vLLM refuses its PLE CPU-offload worker when `nnodes != 1`; gated by
    `MBX_PLE_MULTINODE=1` (unset here), one full-table worker per box. Inert unless you serve an int3 checkpoint.
 4. **fp8 KV on the QSA path** (`04-qsa-fp8-nvfp4-kv.py`, v2.1): upstream vLLM PR #54846 ported as whole-file overlays
-   of the three files it touches (`docker/overlays/`, provenance noted there); the PR's numerical tests ship in
+   of the three files it touches (`docker/overlays/`; the patch script asserts the sha256 of the vendor originals and of the
+   overlays at build time, so what ships is what is described); the PR's numerical tests ship in
    `docker/tests/` and pass on the GB10. Activated by `kv-cache-dtype: fp8` in `recipe.yaml`.
 
 Each patch refuses to apply twice and fails the build if its anchor moved. The Dockerfile, the patch scripts, the
