@@ -23,6 +23,8 @@ cd qwen38-flash-next-cluster-recipe
 ./run.sh        # first run: sets the cluster up (asks for the 2nd box), downloads ~99G, syncs it, serves on :8000
 ```
 
+**Hugging Face token.** Anonymous downloads are rate-limited, and gated models (license-agreement repos, e.g. uncensored variants) refuse anonymous access. `run.sh` looks for `HF_TOKEN`, then `~/.cache/huggingface/token` (`hf auth login`), and asks for one when the repo is gated — after you accepted its agreement on the model page. Nothing is stored by the kit.
+
 `./stop.sh` stops both boxes. `./view.sh` shows live stats plus the RDMA proof. Requirements: two DGX Sparks
 with docker + the NVIDIA container runtime, connected by their ConnectX ports (a direct cable or a switch),
 ssh from the head to the worker (a password once — `setup.sh` installs a key). First boot reaches healthy in

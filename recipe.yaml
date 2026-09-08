@@ -14,6 +14,12 @@ server:
                                                 # 2.8GHz A725) — measured +2-3% at every concurrency
   model: myllmbox/Qwen3.8-Flash-Next-hibrid47   # HF repo — downloaded into ./models on first run (~99G),
                                                 # then synced to the worker at the SAME absolute path
+  # model: myllmbox/Qwen3.8-Flash-Next-hibrid47-uncensored   # the abliterated body (OrcaRouter) on the same stack, 99G:
+                                                # no refusals, NO guardrails — research / red-teaming / private use behind your
+                                                # own moderation. GATED on Hugging Face: accept its agreement, then hf auth login
+                                                # or export HF_TOKEN (run.sh checks). Same speed (c=1 17.9 steps/s vs 17.7), same
+                                                # KV pool; nothing else in this file changes. Set served-model-name to
+                                                # Qwen/Qwen3.8-Flash-Next-Uncensored if you run both and want them told apart.
   port: 8000                                    # OpenAI API on the head box
   host: 127.0.0.1                               # the cluster runs on host networking — 127.0.0.1 keeps the API
                                                 # local; set 0.0.0.0 to expose it on the LAN

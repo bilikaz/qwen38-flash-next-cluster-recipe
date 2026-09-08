@@ -32,6 +32,7 @@ echo "· image $IMAGE — worker"; ssh_w "docker pull -q '$IMAGE' >/dev/null || 
 
 # 2. weights: ~99G, resumable — download on the head, then sync to the worker at the SAME path
 if [ ! -f "$MODEL_DIR/model.safetensors.index.json" ]; then
+  hf_access "$HF_REPO" || exit 1
   echo "· downloading $HF_REPO -> $MODEL_DIR"
   if command -v hf >/dev/null; then
     hf download "$HF_REPO" --local-dir "$MODEL_DIR"
