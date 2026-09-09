@@ -1,5 +1,12 @@
 # Qwen3.8-Flash-Next on two DGX Sparks
 
+### Two checkpoints: `hibrid47`, the default — and `hibrid47-uncensored`, made from it (abliterated, gated). Switch with one line in `recipe.yaml`
+
+[`hibrid47`](https://huggingface.co/myllmbox/Qwen3.8-Flash-Next-hibrid47) (the base model, default)
+and [`hibrid47-uncensored`](https://huggingface.co/myllmbox/Qwen3.8-Flash-Next-hibrid47-uncensored) (OrcaRouter's abliterated
+body, no refusals, no guardrails — gated, research / private use). Same stack, same speed. To switch: in `recipe.yaml`
+comment the active `model:` line and uncomment the other, then `./run.sh`. Details in [Which checkpoint](#which-checkpoint).
+
 Two boxes, one model, RDMA. Peaks: **80 tok/s single-stream**, 674 tok/s at 48 streams (averages **73@c=1 and 635@c=48** on code). 26 of 32 boss-level render tests passed. Three commands.
 
 **v2.1 (2026-09-08): fp8 KV.** Same model, same speed, 1.66× the KV pool: **2.85M pooled tokens** on the same 28G pin
@@ -48,6 +55,22 @@ curl http://127.0.0.1:8000/v1/chat/completions -H 'Content-Type: application/jso
   "messages": [{"role": "user", "content": "hello"}]
 }'
 ```
+
+## Which checkpoint
+
+Two checkpoints run on this exact stack; `recipe.yaml` ships with the first active and the second commented out under it.
+Switching is comment one line, uncomment the other, `./run.sh`:
+
+| `model:` | what it is | speed on this kit |
+|---|---|---|
+| `myllmbox/Qwen3.8-Flash-Next-hibrid47` (default) | the base model, calibrated body, the checkpoint every number below was measured on | 17.7 steps/s, 73–76 tok/s at c=1 |
+| `myllmbox/Qwen3.8-Flash-Next-hibrid47-uncensored` | OrcaRouter's abliterated (refusal-removed) body on the same layout — **no guardrails**; research, red-teaming, private use behind your own moderation | 17.9 steps/s, 73–75 tok/s, same 2.85M-token KV pool |
+
+The uncensored repo is **gated**: open its Hugging Face page, accept the agreement, then `hf auth login` (or `export
+HF_TOKEN=…`) before `./run.sh` — the kit checks both and tells you what is missing. Running both checkpoints at different
+times? Set `served-model-name` to something distinct (e.g. `Qwen/Qwen3.8-Flash-Next-Uncensored`) so clients and logs can tell
+them apart. Both weigh 99 GB; the first download of the second one is a full download (different body), the 8 table shards are
+shared bytes.
 
 ## Measured performance (this exact stack, 2× DGX Spark, RDMA, K=4, `vm.compaction_proactiveness=0`)
 
