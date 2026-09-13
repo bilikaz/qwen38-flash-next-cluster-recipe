@@ -5,21 +5,21 @@
 # worker) and the per-box NCCL/gloo interface pins are added by run.sh from cluster.env — never put them here.
 
 server:
-  image: myllmbox/qwen38-flash-next-cluster-vllm:v4   # pinned public tag (digest in README) = the v1 serving image +
-                                                      # four patches: the NVFP4 n-gram table as a resident GPU
-                                                      # parameter (hibrid47); fp8 KV on the QSA path (upstream PR
-                                                      # #54846 ported); loader drops each shard from the page cache
-                                                      # once consumed; the int3/offload path kept as fallback
+  image: myllmbox/qwen38-flash-next-cluster-vllm:v5   # pinned public tag (digest in README) = vLLM 0.29.0 (vllm/vllm-openai)
+                                                      # + six patches: the NVFP4 n-gram table as a resident GPU parameter;
+                                                      # the 4-bit output head (hibrid48) — stock 0.29 cannot load it;
+                                                      # fp8 KV on the QSA path (opt-in); QSA rope clamp + fused draft;
+                                                      # b12x prewarm clamp. v4 (vendor pin, hibrid47) = `git checkout v2.1`
   cpuset: "5-9,15-19"                           # the GB10's 10 Cortex-X925 3.9GHz cores (0-4,10-14 are
                                                 # 2.8GHz A725) — measured +2-3% at every concurrency
-  model: myllmbox/Qwen3.8-Flash-Next-hibrid47   # HF repo — downloaded into ./models on first run (~99G),
-                                                # then synced to the worker at the SAME absolute path
-  # model: myllmbox/Qwen3.8-Flash-Next-hibrid47-uncensored   # the abliterated body (OrcaRouter) on the same stack, 99G:
+  model: myllmbox/Qwen3.8-Flash-Next-hibrid48   # HF repo — downloaded into ./models on first run (~99G),
+                                                # then synced to the worker at the SAME absolute path.
+                                                # = hibrid47 + the output head as NVFP4: 22 engine steps/s (was 17.7)
+  # model: myllmbox/Qwen3.8-Flash-Next-hibrid48-uncensored   # the abliterated body (OrcaRouter) with the same head, 98G:
                                                 # no refusals, NO guardrails — research / red-teaming / private use behind your
                                                 # own moderation. GATED on Hugging Face: accept its agreement, then hf auth login
-                                                # or export HF_TOKEN (run.sh checks). Same speed (c=1 17.9 steps/s vs 17.7), same
-                                                # KV pool; nothing else in this file changes. Set served-model-name to
-                                                # Qwen/Qwen3.8-Flash-Next-Uncensored if you run both and want them told apart.
+                                                # or export HF_TOKEN (run.sh checks). Nothing else in this file changes. Set
+                                                # served-model-name to Qwen/Qwen3.8-Flash-Next-Uncensored if you run both.
   port: 8000                                    # OpenAI API on the head box
   host: 127.0.0.1                               # the cluster runs on host networking — 127.0.0.1 keeps the API
                                                 # local; set 0.0.0.0 to expose it on the LAN
@@ -28,12 +28,14 @@ server:
   cache_dir: ./cache                            # compile/autotune caches (per box); deletable, first boot rebuilds
 
 env:
-  # The n-gram (PLE) table is an ordinary GPU parameter in hibrid47 — no offload worker.
+  # The n-gram (PLE) table is an ordinary GPU parameter in hibrid47/48 — no offload worker.
   MBX_PLE_REPLICATE: "1"                        # the FULL table on each box (28.6G, no per-step exchange) — the
-                                                # layout every v2 number was measured on. Unset = half per box
+                                                # layout every number was measured on. Unset = half per box
                                                 # (14G less per box → room for a 40G KV pin; steps within 1 %)
-  OMP_NUM_THREADS: "8"                          # matched to the 10-core pin
-  MBX_VOCAB_GEMV: "1"                           # measured +5.5% steps
+  # No OMP_NUM_THREADS: vLLM 0.29 sizes its threads itself (many for the load, one for serving); a fixed value hurts one phase.
+  PYTHONUNBUFFERED: "1"                         # rank-1 load progress actually shows in docker logs
+  TORCH_NCCL_ASYNC_ERROR_HANDLING: "1"
+  TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC: "180"       # die in 3 min on a stuck collective instead of hanging 30
   VLLM_MARLIN_USE_ATOMIC_ADD: "1"               # Marlin small-N fast path (self-gating)
   TORCH_CUDA_ARCH_LIST: "12.1a"
   FLASHINFER_CUDA_ARCH_LIST: "12.1a"
@@ -49,26 +51,33 @@ env:
 
 vllm:
   served-model-name: Qwen/Qwen3.8-Flash-Next
+  moe-backend: marlin                           # fastest MoE kernel for NVFP4 W4A16 on the GB10 in 0.29 (+5 % steps over
+                                                # flashinfer_cutlass; the b12x backend crashed on prefix-cached long prompts)
   pipeline-parallel-size: 1                     # TP only (TP=2 is set by run.sh = box count)
-  distributed-executor-backend: mp              # required — PLE worker spawn; no Ray
+  distributed-executor-backend: mp              # no Ray
   gpu-memory-utilization: 0.70                  # with kv-cache-memory pinned this does not size the KV pool (verified:
                                                 # 65G of weights + the pin boot fine at 0.70)
-  kv-cache-memory: "28000000000"                # 28G per box = 2.85M pooled KV tokens in fp8 (1.71M was bf16; KV is
+  kv-cache-memory: "28000000000"                # 28G per box = 1.71M pooled KV tokens in bf16 (6.5× the 262K window; KV is
                                                 # split across the two boxes). Leaves ~5G host headroom per box after
                                                 # graph capture — do not take vLLM's "fully utilize" figure
-  kv-cache-dtype: fp8                           # v2.1: fp8_e4m3 KV on the QSA path (image patch 04). 1.66× the tokens
-                                                # on the same pin; the GDN state stays as the model ships it
+  # kv-cache-dtype: fp8                         # 2.85M tokens on the same pin (image patch 12) — but measured −0.3 accepted
+                                                # tokens per step on this lane (4.23 → 3.92, 5+5 runs), i.e. −7 % tok/s.
+                                                # Enable it when you need many long seats more than single-stream speed.
+  compilation-config: '{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[1,2,4,5,8,10,15,16,20,25,30,32,40,60,64,80,120,128,160],"compile_ranges_endpoints":[32]}'
+                                                # 0.29's V2 runner rounds each FULL-graph size UP to a multiple of K+1 (=5) and
+                                                # drops sizes past the largest listed → the list must reach seats×5 = 160,
+                                                # or every rung above c=6 decodes eagerly (measured: c=32 without it = eager)
   max-model-len: 262144                         # the model's native max
-  max-num-seqs: 32                              # 32 seats × ~89k tokens of pool each (2.85M / 32), 17 tok/s per
+  max-num-seqs: 32                              # 32 seats × ~53k tokens of pool each (1.71M / 32), 17 tok/s per
                                                 # stream. Each running request also pins ~1.9 % of the pool at
                                                 # admission (the model's GDN recurrent state, 36 layers × (2+K)
-                                                # blocks — fp8 KV does not shrink it), so ~52 is the hard ceiling;
-                                                # 48 seats ran at 13 tok/s each and left ~3k tokens of pool per seat
+                                                # blocks), so ~52 is the hard ceiling either way
   max-num-batched-tokens: 8192                  # also the image-input encoder budget — keep for image requests
+                                                # (4096 made 0.29 add a compile range that crashed the MoE profile run)
   enable-prefix-caching: true
   enable-auto-tool-choice: true
   tool-call-parser: qwen3_xml
   reasoning-parser: qwen3
-  speculative-config: '{"method":"mtp","num_speculative_tokens":4}'   # K=4: acceptance 4.2–4.6 (cap 5.0), ~8%
-                                                # step cost vs K=3, net faster at every concurrency
+  speculative-config: '{"method":"mtp","num_speculative_tokens":4}'   # K=4: acceptance 4.2–4.4 on code (cap 5.0), ~3 on
+                                                # reasoning prose; dense code reaches 4.9 → 107 tok/s peak at 22 steps/s
   async-scheduling: true                        # +9-12% at c=4-5, neutral at 8+

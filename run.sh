@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Qwen3.8-Flash-Next (hibrid46, 4.6-bit) on TWO DGX Sparks: TP=2 over the ConnectX link (RDMA).
+# Qwen3.8-Flash-Next (hibrid48: NVFP4 table on the GPU + NVFP4 output head, vLLM 0.29) on TWO DGX Sparks: TP=2 over the ConnectX link (RDMA).
 # First run: no cluster.env → ./setup.sh (finds the second box, the interconnect, opens the firewall). Then:
 # pull the image on both boxes, download the weights (once) and sync them to the worker, start the worker
 # (--headless) and the head, wait healthy. Everything model-side is recipe.yaml; the boxes are cluster.env.
@@ -31,7 +31,9 @@ echo "· image $IMAGE — head"; docker pull -q "$IMAGE" >/dev/null || docker im
 echo "· image $IMAGE — worker"; ssh_w "docker pull -q '$IMAGE' >/dev/null || docker image inspect '$IMAGE' >/dev/null 2>&1" || { echo "✗ worker cannot pull $IMAGE"; exit 1; }
 
 # 2. weights: ~99G, resumable — download on the head, then sync to the worker at the SAME path
-if [ ! -f "$MODEL_DIR/model.safetensors.index.json" ]; then
+# "complete" = the index is there AND no partial blob is left behind by an interrupted download (huggingface_hub keeps
+# them under .cache/huggingface/download/*.incomplete and resumes them) — the index lands early, so it alone proves nothing.
+if [ ! -f "$MODEL_DIR/model.safetensors.index.json" ] || [ -n "$(find "$MODEL_DIR/.cache" -name '*.incomplete' -print -quit 2>/dev/null)" ]; then
   hf_access "$HF_REPO" || exit 1
   echo "· downloading $HF_REPO -> $MODEL_DIR"
   if command -v hf >/dev/null; then
