@@ -12,21 +12,23 @@ Two boxes, one model, RDMA. **22 engine steps/s**: 92 tok/s single-stream writin
 ## Quality (measured on this serve, thinking on)
 
 [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) run against the running two-Spark serve of
-hibrid48 (2026-09-13), **thinking on** — the mode the model is served in — at temperature 0.6, top-p 0.95, top-k 20 (the model
+hibrid48 and hibrid48-uncensored (2026-09-13), **thinking on** — the mode the model is served in — at temperature 0.6, top-p 0.95, top-k 20 (the model
 card recommends 1.0 / 0.95 / 20 for thinking; a card-faithful pass at 1.0 is a separate run), a 32k-token budget per answer, 16
 requests in flight. Qwen publishes no numbers for these four tests — its card reports LiveCodeBench v6 91.9, GPQA Diamond 91.7,
 IFBench 81.3, SWE-bench Pro 62.5 — so there is no official row to compare against; GPQA Diamond is the one overlap still to run. HumanEval is complete; the
 other tasks use a fixed 200-question subset (seed 123123123), the same questions on every checkpoint we compare.
 
-| task | questions | score |
-|---|---|---|
-| HumanEval pass@1 | 164 | **95.7** |
-| GSM8K exact match | 200 | **98.0** |
-| IFEval prompt-level strict / instruction-level strict | 200 | **91.5** / 93.4 |
-| MMLU-Pro (14 subjects, sampled by size) | 200 | **84.9** |
+| task | questions | hibrid48 | hibrid48-uncensored |
+|---|---|---|---|
+| HumanEval pass@1 | 164 | **95.7** | **94.5** |
+| GSM8K exact match | 200 | **98.0** | **97.5** |
+| IFEval prompt-level strict / instruction-level strict | 200 | **91.5** / 93.4 | **94.5** / 96.2 |
+| MMLU-Pro (14 subjects, sampled by size) | 200 | **84.9** | **82.9** |
+| answers that ran into the 32k budget while thinking (count as wrong) | 763 | 11 | 6 |
 
-763 requests in 91 minutes. 11 of them (1.4 %) ran into the 32k budget while still thinking and count as wrong above — that
-runaway rate is itself a number to compare between checkpoints. Subsets of 200 carry about ±3 points of sampling noise;
+Same 763 questions on both checkpoints, 91 and 75 minutes. The IFEval gain is the one difference larger than the two subsets'
+sampling error; the other deltas are one to four questions each. The abliterated body also thinks shorter (median reasoning
+−8 %, 90th percentile −27 %) and runs away half as often. The runaway rate is itself a number to compare between checkpoints. Subsets of 200 carry about ±3 points of sampling noise;
 published leaderboard numbers use other prompts, few-shot counts and full sets, so treat them as a sanity band, not a column.
 The runner (`bench/quality/` in the myllmbox repo: harness driver, answer extraction that reads a chat model's final answer,
 and a side-by-side table tool) works against any OpenAI-compatible endpoint — rerun it and count. hibrid47 on the same
@@ -144,7 +146,7 @@ Switching is comment one line, uncomment the other, `./run.sh`:
 | `model:` | what it is | speed on this kit |
 |---|---|---|
 | `myllmbox/Qwen3.8-Flash-Next-hibrid48` (default) | the base model, calibrated body, NVFP4 output head — the checkpoint the v3 numbers were measured on | 22.0 steps/s, 92 tok/s at c=1, **107** peak |
-| `myllmbox/Qwen3.8-Flash-Next-hibrid48-uncensored` | OrcaRouter's abliterated (refusal-removed) body with the same head — **no guardrails**; research, red-teaming, private use behind your own moderation | same head, same stack; its own table is not measured yet |
+| `myllmbox/Qwen3.8-Flash-Next-hibrid48-uncensored` | OrcaRouter's abliterated (refusal-removed) body with the same head — **no guardrails**; research, red-teaming, private use behind your own moderation | same head, same stack, same speed; quality table above (IFEval 94.5, HumanEval 94.5, GSM8K 97.5, MMLU-Pro 82.9) |
 
 The uncensored repo is **gated**: open its Hugging Face page, accept the agreement, then `hf auth login` (or `export
 HF_TOKEN=…`) before `./run.sh` — the kit checks both and tells you what is missing. Running both checkpoints at different
