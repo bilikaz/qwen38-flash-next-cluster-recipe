@@ -123,10 +123,10 @@ ssh_w "$(compose 1 "$WORKER_IFACE" "$WORKER_IC" "$WORKER_HCA" "$WORKER_RDMA" "$W
 echo "· streaming engine logs until healthy (Ctrl-C detaches; the cluster keeps booting)"
 docker logs -f "$NAME" 2>&1 &
 LOGS=$!
-trap 'kill "$LOGS" 2>/dev/null' EXIT INT TERM
+trap 'kill "$LOGS" 2>/dev/null || true' EXIT INT TERM
 for i in $(seq 1 360); do
   if curl -sf -m 3 "http://$HOST:$PORT/health" >/dev/null 2>&1; then
-    kill "$LOGS" 2>/dev/null; wait "$LOGS" 2>/dev/null
+    kill "$LOGS" 2>/dev/null || true; wait "$LOGS" 2>/dev/null || true
     echo
     echo "──────────────────────────────────────────────────────────"
     echo "✓ cluster serving — OpenAI-compatible API is live on the head"
@@ -138,11 +138,11 @@ for i in $(seq 1 360); do
     exit 0
   fi
   if ! docker ps -q --filter "name=^$NAME\$" | grep -q .; then
-    kill "$LOGS" 2>/dev/null; wait "$LOGS" 2>/dev/null
+    kill "$LOGS" 2>/dev/null || true; wait "$LOGS" 2>/dev/null || true
     echo "✗ head container exited — see above. Worker's last lines:"; ssh_w "docker logs --tail 20 '$NAME'" 2>&1 | tail -20; exit 1
   fi
   if ! ssh_w "docker ps -q --filter 'name=^$NAME\$' | grep -q ." 2>/dev/null; then
-    kill "$LOGS" 2>/dev/null; wait "$LOGS" 2>/dev/null
+    kill "$LOGS" 2>/dev/null || true; wait "$LOGS" 2>/dev/null || true
     echo "✗ worker container exited:"; ssh_w "docker logs --tail 40 '$NAME'" 2>&1 | tail -40
     docker rm -f "$NAME" >/dev/null 2>&1; exit 1
   fi
