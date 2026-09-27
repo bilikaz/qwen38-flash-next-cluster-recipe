@@ -58,8 +58,7 @@ vllm:
   served-model-name: Qwen/Qwen3.8-Flash-Next
   engram-config: '{"cpu_offload": false}'      # vLLM 0.30 defaults to keeping the n-gram table in pinned host memory; this
                                                 # image serves it from the GPU (the layout every number was measured on)
-  gdn-prefill-backend: triton                   # 0.30's default on the GB10 is FlashInfer; triton measured +1 % at 1 stream,
-                                                # equal from 16 up, and avoids the kernel that crashed a serve on 0.29
+  gdn-prefill-backend: flashinfer               # +5 % prefill over triton from 8k to 256k tokens, same decode speed
   moe-backend: marlin                           # fastest MoE kernel for NVFP4 W4A16 on the GB10 (+5 % steps over
                                                 # flashinfer_cutlass; the b12x backend crashed on prefix-cached long prompts)
   pipeline-parallel-size: 1                     # TP only (TP=2 is set by run.sh = box count)

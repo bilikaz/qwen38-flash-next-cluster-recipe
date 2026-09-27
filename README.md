@@ -8,9 +8,41 @@ body, no refusals, no guardrails — gated, research / private use). Same stack.
 comment the active `model:` line and uncomment the other, then `./run.sh`. Details in [Which checkpoint](#which-checkpoint).
 
 Two boxes, one model, RDMA. **106 tok/s single-stream (121 peak), 817 tok/s at 64 streams (883 peak), a 2.45M-token KV
-pool** — and it boots in about four minutes. Three commands.
+pool, ~3,200 tok/s prefill all the way to 256k** — and it boots in about four minutes. Three commands.
 
 ## Measured performance (this exact stack, 2× DGX Spark, RDMA, K=5, `vm.compaction_proactiveness=0`)
+
+**v4.1 (2026-09-27, FlashInfer GDN prefill)** — the kit as shipped, one complete run of `bench/full.py`: thinking on
+×3, then the ladder on a code prompt (thinking off, 120 s windows), then one request per context size. The ladder uses a
+code prompt from here on; the v4 table below used the pasture scene, whose SVG drafts better (acceptance 5.1 vs 4.8), so
+the two tables are not comparable row for row — same engine speed, steps/s equal.
+
+| concurrent requests | tok/s | peak | per-stream | acceptance |
+|---|---|---|---|---|
+| 1 | **99** | 109 | 99 | 4.73 |
+| 2 | **159** | 173 | 79 | 4.87 |
+| 4 | **233** | 248 | 58 | 4.93 |
+| 8 | **342** | 367 | 43 | 4.93 |
+| 16 | **458** | 495 | 29 | 4.90 |
+| 24 | **547** | 585 | 23 | 4.91 |
+| 32 | **627** | 662 | 20 | 4.91 |
+| 48 | **721** | 752 | 15 | 4.81 |
+| 64 | **793** | 834 | 12 | 4.80 |
+
+Thinking on, one request: **81 tok/s** average, 120 peak.
+
+Long context, one request. Cold = fresh prompt; hot = the same prompt again (prefix cache — an agent's next turn). Decode =
+200 tokens right after the prompt: prose = a summary of it, code = a Python module.
+
+| prompt tokens | cold time to first token | hot time to first token | prefill tok/s | decode prose | decode code |
+|---|---|---|---|---|---|
+| 1k | **0.43 s** | 0.43 s | 2,516 | 75.8 | 65.6 |
+| 8k | 2.5 s | 0.63 s | 3,246 | 65.1 | 68.5 |
+| 32k | 9.9 s | 0.71 s | 3,302 | 81.2 | 56.9 |
+| 64k | 20 s | 0.78 s | 3,291 | 64.7 | 58.0 |
+| 128k | 41 s | **1.0 s** | **3,227** | 64.6 | 67.4 |
+| 192k | 62 s | 1.2 s | 3,155 | 67.6 | 48.0 |
+| 256k | 85 s | 1.2 s | 3,086 | 57.3 | 55.2 |
 
 **v4 ladder (2026-09-24, vLLM 0.30, image v6, `hibrid48`, 41G bf16 pin, 64 seats, Marlin MoE)** — this kit exactly as shipped,
 same prompt and the same windows as the tables below, steady-state averages of 3–6 runs per rung. Thinking off.
@@ -112,6 +144,10 @@ The table above is the v3 serve's; the v4 engine change did not move this one.
 
 ## What changed
 
+**v4.1 (2026-09-27): FlashInfer GDN prefill.** `gdn-prefill-backend` back to 0.30's default: **+5 % prefill from 8k to
+256k tokens** (3,300 vs 3,140 tok/s at 32k), the decode ladder unchanged at every rung from 1 to 64 streams. Measured as
+two complete runs of the same kit, one per backend. Thanks to sethforprivacy for the finding.
+
 **v4 (2026-09-24): vLLM 0.30, five draft tokens, a 2.45M-token pool and 64 seats.** The engine moved to upstream vLLM
 0.30, and speculative decoding was retuned on it:
 
@@ -159,7 +195,7 @@ v1 stays available: `git checkout v1` in this repo (image `…-cluster-vllm:v2`,
 ## Quick start
 
 ```bash
-git clone https://github.com/bilikaz/qwen38-flash-next-cluster-recipe.git
+git clone https://github.com/myllmbox/qwen38-flash-next-cluster-recipe.git
 cd qwen38-flash-next-cluster-recipe
 ./run.sh        # first run: sets the cluster up (asks for the 2nd box), downloads ~99G, syncs it, serves on :8000
 ```
@@ -266,8 +302,7 @@ this for you (it needs root); it takes effect immediately, no restart.
   measured the same as 4, 1 was slower at 32 streams.
 - **`engram-config: {"cpu_offload": false}`**: vLLM 0.30 would otherwise keep the n-gram table in pinned host memory;
   this image serves it from the GPU, the layout every number here was measured on.
-- **`gdn-prefill-backend: triton`**: 0.30 picks FlashInfer for this on the GB10; triton measured +1 % at one stream and
-  the same from 16 up.
+- **`gdn-prefill-backend: flashinfer`**: +5 % prefill over `triton`, same decode speed.
 - **`load-format: fastsafetensors`**: the loader every v4 boot was measured with. Remove it for vLLM's default loader.
 - **`gpu-memory-utilization`** 0.70: with the pin set it does not size the KV pool.
 - **`max-num-seqs`**: 64 — ~38k tokens of pool per seat, 13 tok/s per stream, 817 tok/s aggregate. Each running request
