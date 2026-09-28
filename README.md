@@ -7,16 +7,16 @@ and [`hibrid48-uncensored`](https://huggingface.co/myllmbox/Qwen3.8-Flash-Next-h
 body, no refusals, no guardrails — gated, research / private use). Same stack. To switch: in `recipe.yaml`
 comment the active `model:` line and uncomment the other, then `./run.sh`. Details in [Which checkpoint](#which-checkpoint).
 
-Two boxes, one model, RDMA. **99 tok/s single-stream (118 peak), 793 tok/s at 64 streams (834 peak), a 2.45M-token KV
-pool, ~3,200 tok/s prefill all the way to 256k** — and it boots in about four minutes. Three commands.
+Two boxes, one model, RDMA. **99 tok/s single-stream, 793 tok/s at 64 streams (834 peak), 118 tok/s peak with thinking on,
+a 2.45M-token KV pool, ~3,200 tok/s prefill all the way to 256k** — and it boots in about four minutes. Three commands.
 
 ## Measured performance (this exact stack, 2× DGX Spark, RDMA, K=5, `vm.compaction_proactiveness=0`)
 
-**v4.1 (2026-09-27, FlashInfer GDN prefill)** — the kit as shipped, one complete run of `bench/full.py`: code prompt, 120 s windows; peak at 1 stream = the thinking-on request's best window. The v4 table below used a different prompt — compare within a table, not across.
+**v4.1 (2026-09-27, FlashInfer GDN prefill)** — the kit as shipped, one complete run of `bench/full.py`: mixed prompt (LRU-cache code + a prose explanation of it), thinking off, 120 s windows. The v4 table below used a different prompt — compare within a table, not across.
 
 | concurrent requests | tok/s | peak | per-stream | acceptance |
 |---|---|---|---|---|
-| 1 | **99** | 118 | 99 | 4.73 |
+| 1 | **99** | 109 | 99 | 4.73 |
 | 2 | **159** | 173 | 79 | 4.87 |
 | 4 | **233** | 248 | 58 | 4.93 |
 | 8 | **342** | 367 | 43 | 4.93 |
@@ -26,10 +26,12 @@ pool, ~3,200 tok/s prefill all the way to 256k** — and it boots in about four 
 | 48 | **721** | 752 | 15 | 4.81 |
 | 64 | **793** | 834 | 12 | 4.80 |
 
-Long context, one request. Cold = fresh prompt; hot = the same prompt again (prefix cache — an agent's next turn). Decode =
-1,000 tokens right after the prompt: code = the ladder's code prompt after the context, prose = a summary of it.
+Thinking on, one request (the pasture scene): **80 tok/s** average, 118 peak.
 
-| prompt tokens | cold time to first token | hot time to first token | prefill tok/s | decode code | decode prose |
+Long context, one request. Cold = fresh prompt; hot = the same prompt again (prefix cache — an agent's next turn). Decode =
+1,000 tokens right after the prompt: mixed = the ladder's mixed prompt after the context, prose = a summary of it.
+
+| prompt tokens | cold time to first token | hot time to first token | prefill tok/s | decode mixed | decode prose |
 |---|---|---|---|---|---|
 | 1k | **0.42 s** | 0.44 s | 2,543 | 99.0 | 84.0 |
 | 8k | 2.6 s | 0.65 s | 3,222 | 90.6 | 74.3 |
