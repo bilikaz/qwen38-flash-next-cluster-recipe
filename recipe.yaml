@@ -26,6 +26,8 @@ server:
   master_port: 25000                            # torch.distributed rendezvous, on the interconnect
   models_dir: ./models
   cache_dir: ./cache                            # compile/autotune caches (per box); deletable, first boot rebuilds
+  patches: ""                                   # optional vLLM patches from patches/, space-separated (e.g. hermes-chat);
+                                                # default none = the stock image. See patches/README.md
 
 env:
   # The n-gram (PLE) table is an ordinary GPU parameter in hibrid47/48 — no offload worker.

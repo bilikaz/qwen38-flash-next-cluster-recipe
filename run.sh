@@ -78,7 +78,7 @@ compose() {  # compose <rank> <iface> <ic-ip> <hca> <has-rdma yes|no> <gid-index
   a=(docker run -d --name "$NAME" --gpus all --ipc=host --network host --cap-add SYS_PTRACE)
   [ "$rdma" = yes ] && a+=(--device /dev/infiniband --cap-add IPC_LOCK --ulimit memlock=-1:-1)
   [ -n "$CPUSET" ] && a+=(--cpuset-cpus "$CPUSET")
-  a+=(-v "$MODELS_ABS:/models" -v "$CACHE_ABS:/cache"
+  a+=(-v "$MODELS_ABS:/models" -v "$CACHE_ABS:/cache" "${PMOUNTS[@]}"
       -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1
       -e FLASHINFER_WORKSPACE_BASE=/cache/flashinfer-workspace -e VLLM_CACHE_ROOT=/cache/vllm-cache
       -e "NCCL_SOCKET_IFNAME=$iface" -e "GLOO_SOCKET_IFNAME=$iface" -e "VLLM_HOST_IP=$ic" -e NCCL_IB_DISABLE=0)
@@ -105,6 +105,33 @@ for side in head worker; do
   else echo "· $side: NCCL_IB_GID_INDEX=$g (probed)"; fi
 done
 compaction_check
+
+# 4b. optional vLLM patches (recipe.yaml server.patches → patches/<name>.patch; default none): the files a patch
+#     touches are copied out of the image, patched, copied to the worker and mounted read-only on both boxes.
+PATCHES="$(rkey server patches)"; PMOUNTS=()
+if [ -n "$PATCHES" ]; then
+  command -v patch >/dev/null || { echo "✗ server.patches needs the 'patch' tool on this box (apt install patch)"; exit 1; }
+  VLLM_DIR="$(docker run --rm --entrypoint python3 "$IMAGE" -c 'import importlib.util as u; print(u.find_spec("vllm").submodule_search_locations[0])')"
+  STAGE="$CACHE_ABS/patched"; rm -rf "$STAGE"; mkdir -p "$STAGE"
+  cid="$(docker create "$IMAGE")"; FILES=()
+  pfail() { docker rm "$cid" >/dev/null 2>&1; echo "✗ $*"; exit 1; }
+  for p in ${PATCHES//,/ }; do
+    pf="patches/$p.patch"; [ -f "$pf" ] || pfail "server.patches: $pf not found"
+    while read -r rel; do
+      [ -f "$STAGE/$rel" ] && continue
+      mkdir -p "$STAGE/$(dirname "$rel")"
+      docker cp "$cid:$VLLM_DIR/$rel" "$STAGE/$rel" >/dev/null 2>&1 || pfail "patch $p: vllm/$rel is not in $IMAGE"
+      FILES+=("$rel")
+    done < <(sed -n 's#^+++ b/\([^[:space:]]*\).*#\1#p' "$pf")
+    patch --dry-run -s -p1 -d "$STAGE" < "$pf" >/dev/null 2>&1 || pfail "patch $p does not fit $IMAGE — remove it from server.patches"
+    patch -s -p1 --no-backup-if-mismatch -d "$STAGE" < "$pf"
+    echo "· patch $p applied"
+  done
+  docker rm "$cid" >/dev/null
+  ssh_w "rm -rf '$STAGE' && mkdir -p '$STAGE'"
+  tar -C "$STAGE" -cf - . | ssh_w "tar -C '$STAGE' -xf -"
+  for rel in "${FILES[@]}"; do PMOUNTS+=(-v "$STAGE/$rel:$VLLM_DIR/$rel:ro"); done
+fi
 
 # 5. launch: clear old containers, then GATE on memory (unified memory needs ~30-60 s after a container dies;
 #    launching earlier = a phantom CUDA OOM), then HEAD first (the rendezvous master), then the worker — the order

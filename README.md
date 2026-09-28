@@ -319,6 +319,8 @@ this for you (it needs root); it takes effect immediately, no restart.
   Set `0.0.0.0` to expose it on the LAN.
 - Thinking is ON by default (model native); disable per request with
   `"chat_template_kwargs": {"enable_thinking": false}` for max speed on structured output.
+- **`patches`** (server): optional vLLM patches from [`patches/`](patches/), off by default — e.g. `patches: hermes-chat`
+  for the Hermes agent (contributed by [@yume-arasaki](https://github.com/yume-arasaki)). Applied at launch over the image's files; the image itself is unchanged.
 
 ## What's in the image
 

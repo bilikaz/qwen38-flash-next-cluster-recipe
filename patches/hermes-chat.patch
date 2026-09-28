@@ -1,0 +1,47 @@
+Hermes agent compatibility (contributed by yume-arasaki, PR #2).
+- a top-level {"reasoning": {"enabled", "effort"}} object (Hermes custom providers) sets enable_thinking and
+  forwards low / medium / xhigh into the chat template; an explicit chat_template_kwargs.enable_thinking still wins
+- an OMITTED temperature is greedy (0) on the chat path; an explicit temperature passes through
+
+--- a/entrypoints/openai/chat_completion/protocol.py
++++ b/entrypoints/openai/chat_completion/protocol.py
+@@ -594,8 +594,22 @@
+         # enable_thinking to false). For templates that don't declare the
+         # variable, resolve_chat_template_kwargs filters it out harmlessly.
+         user_kwargs = self.chat_template_kwargs or {}
+-        if self.reasoning_effort is not None and "enable_thinking" not in user_kwargs:
+-            extra_kwargs["enable_thinking"] = self.reasoning_effort != "none"
++        # Hermes custom providers send {"reasoning": {"enabled", "effort"}}
++        # at the top level (OpenAI extra_body). This image only looked at
++        # reasoning_effort, so effort "none" left Qwen thinking on.
++        effort = self.reasoning_effort
++        if effort is None and "enable_thinking" not in user_kwargs:
++            reasoning = (self.__pydantic_extra__ or {}).get("reasoning")
++            if isinstance(reasoning, dict):
++                if reasoning.get("enabled") is False or reasoning.get("effort") == "none":
++                    effort = "none"
++                else:
++                    effort = reasoning.get("effort") or "medium"
++        if effort is not None and "enable_thinking" not in user_kwargs:
++            extra_kwargs["enable_thinking"] = effort != "none"
++            # Template defaults a missing effort to xhigh. Forward the real one.
++            if effort in ("xhigh", "medium", "low") and "reasoning_effort" not in user_kwargs:
++                extra_kwargs["reasoning_effort"] = effort
+ 
+         return ChatParams(
+             chat_template=self.chat_template or default_template,
+@@ -680,10 +694,11 @@
+                 "repetition_penalty",
+                 self._DEFAULT_SAMPLING_PARAMS["repetition_penalty"],
+             )
++        # Hermes omits temperature. vLLM then samples (this default is 1.0,
++        # or the checkpoint generation_config). Greedy unless the client
++        # set a temperature. Explicit values still pass through.
+         if (temperature := self.temperature) is None:
+-            temperature = default_sampling_params.get(
+-                "temperature", self._DEFAULT_SAMPLING_PARAMS["temperature"]
+-            )
++            temperature = 0.0
+         if (top_p := self.top_p) is None:
+             top_p = default_sampling_params.get(
+                 "top_p", self._DEFAULT_SAMPLING_PARAMS["top_p"]
