@@ -79,6 +79,7 @@ compose() {  # compose <rank> <iface> <ic-ip> <hca> <has-rdma yes|no> <gid-index
   [ "$rdma" = yes ] && a+=(--device /dev/infiniband --cap-add IPC_LOCK --ulimit memlock=-1:-1)
   [ -n "$CPUSET" ] && a+=(--cpuset-cpus "$CPUSET")
   a+=(-v "$MODELS_ABS:/models" -v "$CACHE_ABS:/cache"
+      -v "$CACHE_ABS/hermes-chat-protocol.py:/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/openai/chat_completion/protocol.py:ro"
       -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1
       -e FLASHINFER_WORKSPACE_BASE=/cache/flashinfer-workspace -e VLLM_CACHE_ROOT=/cache/vllm-cache
       -e "NCCL_SOCKET_IFNAME=$iface" -e "GLOO_SOCKET_IFNAME=$iface" -e "VLLM_HOST_IP=$ic" -e NCCL_IB_DISABLE=0)
@@ -105,6 +106,22 @@ for side in head worker; do
   else echo "· $side: NCCL_IB_GID_INDEX=$g (probed)"; fi
 done
 compaction_check
+
+# Hermes custom providers omit temperature and send reasoning as {"enabled","effort"}
+# rather than reasoning_effort. vLLM 0.30 then samples from generation_config.json
+# (temperature 1.0, top_k 20, top_p 0.95) and this model's template treats a missing
+# effort as xhigh. patches/hermes-chat.patch: omitted temperature is greedy, and the
+# reasoning object is forwarded into the chat template. Explicit temperature still wins.
+prepare_hermes_protocol() {
+  local dest="$CACHE_ABS/hermes-chat-protocol.py"
+  echo "· hermes chat patch -> $dest"
+  docker run --rm --entrypoint cat "$IMAGE" \
+    /usr/local/lib/python3.12/dist-packages/vllm/entrypoints/openai/chat_completion/protocol.py > "$dest"
+  patch --forward --batch "$dest" patches/hermes-chat.patch
+  ssh_w "mkdir -p '$CACHE_ABS'"
+  scp -q "$dest" "$WORKER:$dest"
+}
+prepare_hermes_protocol
 
 # 5. launch: clear old containers, then GATE on memory (unified memory needs ~30-60 s after a container dies;
 #    launching earlier = a phantom CUDA OOM), then HEAD first (the rendezvous master), then the worker — the order
