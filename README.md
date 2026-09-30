@@ -322,6 +322,15 @@ this for you (it needs root); it takes effect immediately, no restart.
 - **`patches`** (server): optional vLLM patches from [`patches/`](patches/), off by default — e.g. `patches: hermes-chat`
   for the Hermes agent (contributed by [@yume-arasaki](https://github.com/yume-arasaki)). Applied at launch over the image's files; the image itself is unchanged.
 
+## Optional exact GDN replay build
+
+[Exact native GDN replay](exact-gdn-replay/README.md) provides a pinned derived-image
+build for this two-GB10 configuration. It reduces speculative decode state-copy
+traffic while preserving native FP32 round points and existing cache capacity.
+The package includes differential correctness tests, explicit scope and memory
+costs, measurement conditions, and instructions for preserving a rollback. The
+standard image and recipe defaults remain unchanged.
+
 ## What's in the image
 
 `myllmbox/qwen38-flash-next-cluster-vllm:v6` — upstream `vllm/vllm-openai:v0.30.0` plus **readable patches**, each an

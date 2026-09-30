@@ -1,0 +1,13 @@
+{
+  "reference_vllm_commit": "ced6857afa0ea7b2e3f0846a62e1394e90f15607",
+  "reference_kernel_path": "csrc/libtorch_stable/gdn/fused_gdn_decode_kernel.cu",
+  "reference_kernel_sha256": "9581d256847b1922b21a54c39086d92da4f402b7310b0e8649e45ec0cae341fe",
+  "native_math_contract": "Native BF16 activations, FP32 recurrent state, sigmoid gate; actual rounded FP32 decay and forward FMUL then FMA, native CUDA fast-math FTZ.",
+  "record_layout": "[tokens,24,257] FP32: delta[0:128], normalized_key[128:256], actual_decay[256]. This is not upstream log-decay record format.",
+  "tested_hardware": "NVIDIA GB10 SM121; compile sm_120f using pinned CUDA 13 toolchain.",
+  "source_license": "Apache-2.0; verifier derived from vLLM native fused GDN kernel, retaining attribution.",
+  "integration_source_sha256": {
+    "model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py": "b80f8e6f3fff442fb880aebb3209c52f814f66490009f4ac4003de603576d10a",
+    "v1/worker/gpu/model_states/mamba_hybrid.py": "573e130ac5587d4822fabf97adad1ad0fda02ff83c5e70df879a5bb175ae845c"
+  }
+}

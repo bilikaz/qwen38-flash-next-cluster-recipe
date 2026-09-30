@@ -1,0 +1,1304 @@
+{
+  "recorded_utc": "2026-09-30T13:28:56.829883+00:00",
+  "scope": "Two GB10s, pinned v6 hibrid48, TP2/PP1, C8, 1024 output tokens per request",
+  "clock_configuration": "Owner-configured underclock to approximately 2.2 GHz; observed SM clocks 2184/2190 MHz in both arms. Unchanged for the tests. Stock clocks not measured.",
+  "base_image_digest": "sha256:861ac752164e0d723c5eff3f876586c6678c26ad4a516112c48745f6a101ff4d",
+  "candidate_image_id": "sha256:8c689aca101820218f3995e93efa4c52c5dd1302765a13d065498ba9d9b65c44",
+  "procedure": "Original arm before candidate arm; candidate staged with separate disk-cache bind; no competing GPU work. See VALIDATION.md.",
+  "interpretation": "Aggregate end-to-end output tokens divided by wall time. Cold phases include prefill/admission; warm phases reuse identical prompts. Small run sets, not confidence intervals. Request-local ignore_eos equalizes output work, not quality.",
+  "completed_pairs": 17,
+  "cases": [
+    {
+      "case": "install-c8-code-r0",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-code-r0",
+        "time_utc": "2026-09-30T12:12:36.381946+00:00",
+        "wall_s": 52.8746410299791,
+        "aggregate_tps": 309.8649878438045,
+        "requests": 16,
+        "prompt_tokens": 16486,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.5759169913180813,
+          "p50": 1.443615521013271,
+          "p95": 2.449080384481931
+        },
+        "latency_s": {
+          "mean": 26.14365510999778,
+          "p50": 26.169111241499195,
+          "p95": 27.62097166950116
+        },
+        "tpot_s": {
+          "mean": 0.02401538428023431,
+          "p50": 0.024097317382189166,
+          "p95": 0.02560847002980122
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 3661.0,
+        "spec_decode_num_accepted_tokens_total": 12736.0,
+        "accepted_draft_tokens_per_draft": 3.478830920513521,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-code-r0",
+        "time_utc": "2026-09-30T12:46:08.737222+00:00",
+        "wall_s": 46.803530144970864,
+        "aggregate_tps": 350.0590649733393,
+        "requests": 16,
+        "prompt_tokens": 16486,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.8179262874400592,
+          "p50": 2.029160801495891,
+          "p95": 2.2775140179874143
+        },
+        "latency_s": {
+          "mean": 23.214019248880504,
+          "p50": 23.311072904005414,
+          "p95": 24.14801416573755
+        },
+        "tpot_s": {
+          "mean": 0.02091504688312849,
+          "p50": 0.020807881958947453,
+          "p95": 0.02247528542254044
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 3638.0,
+        "spec_decode_num_accepted_tokens_total": 12762.0,
+        "accepted_draft_tokens_per_draft": 3.507971412864211,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 12.971480711397977,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-code-r1",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-code-r1",
+        "time_utc": "2026-09-30T12:13:40.198969+00:00",
+        "wall_s": 52.78853974502999,
+        "aggregate_tps": 310.3703962855412,
+        "requests": 16,
+        "prompt_tokens": 16486,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.4422150946847978,
+          "p50": 1.6345934825367294,
+          "p95": 2.1272844402410556
+        },
+        "latency_s": {
+          "mean": 25.979591688505025,
+          "p50": 25.91679443549947,
+          "p95": 27.98499283476849
+        },
+        "tpot_s": {
+          "mean": 0.023985705370303253,
+          "p50": 0.024146329823545455,
+          "p95": 0.02539451993282776
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 3648.0,
+        "spec_decode_num_accepted_tokens_total": 12760.0,
+        "accepted_draft_tokens_per_draft": 3.4978070175438596,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-code-r1",
+        "time_utc": "2026-09-30T12:47:07.097407+00:00",
+        "wall_s": 47.72330083500128,
+        "aggregate_tps": 343.31238018606683,
+        "requests": 16,
+        "prompt_tokens": 16486,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.4785406023911492,
+          "p50": 1.6300435895391274,
+          "p95": 2.1285983705165563
+        },
+        "latency_s": {
+          "mean": 23.656306260883866,
+          "p50": 23.332242029020563,
+          "p95": 25.423112225005752
+        },
+        "tpot_s": {
+          "mean": 0.021679145316219665,
+          "p50": 0.02169087165734482,
+          "p95": 0.0232794113230432
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 3648.0,
+        "spec_decode_num_accepted_tokens_total": 12760.0,
+        "accepted_draft_tokens_per_draft": 3.4978070175438596,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 10.613764809649883,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-code-r2",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-code-r2",
+        "time_utc": "2026-09-30T12:14:42.942769+00:00",
+        "wall_s": 51.49806161900051,
+        "aggregate_tps": 318.1478969289017,
+        "requests": 16,
+        "prompt_tokens": 16486,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.6394076871874859,
+          "p50": 1.8716406335006468,
+          "p95": 2.1299522199697094
+        },
+        "latency_s": {
+          "mean": 25.44938688325783,
+          "p50": 25.31378942754236,
+          "p95": 26.85544366076647
+        },
+        "tpot_s": {
+          "mean": 0.023274661970743248,
+          "p50": 0.023076954540082607,
+          "p95": 0.024992064500978864
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 3632.0,
+        "spec_decode_num_accepted_tokens_total": 12770.0,
+        "accepted_draft_tokens_per_draft": 3.515969162995595,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-code-r2",
+        "time_utc": "2026-09-30T12:48:05.987759+00:00",
+        "wall_s": 48.277385413006414,
+        "aggregate_tps": 339.3721482602491,
+        "requests": 16,
+        "prompt_tokens": 16486,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.6644420661832555,
+          "p50": 1.3505158290208783,
+          "p95": 2.4609683777671307
+        },
+        "latency_s": {
+          "mean": 23.825279101758497,
+          "p50": 23.650691883522086,
+          "p95": 25.597746197730885
+        },
+        "tpot_s": {
+          "mean": 0.021662597297727508,
+          "p50": 0.021836870807952012,
+          "p95": 0.02291241874560447
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 3622.0,
+        "spec_decode_num_accepted_tokens_total": 12788.0,
+        "accepted_draft_tokens_per_draft": 3.5306460519050247,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 6.6711902031181936,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-long-128k-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-long-128k-cold",
+        "time_utc": "2026-09-30T11:54:52.148203+00:00",
+        "wall_s": 377.2315967089962,
+        "aggregate_tps": 21.716102445998096,
+        "requests": 8,
+        "prompt_tokens": 1046888,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 192.14829257439123,
+          "p50": 192.2450776680198,
+          "p95": 326.23440442059945
+        },
+        "latency_s": {
+          "mean": 363.92037144362985,
+          "p50": 363.1380788035167,
+          "p95": 374.3112190748914
+        },
+        "tpot_s": {
+          "mean": 0.16791014552222738,
+          "p50": 0.16898369383479295,
+          "p95": 0.29300669917157923
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2192.0,
+        "spec_decode_num_accepted_tokens_total": 6000.0,
+        "accepted_draft_tokens_per_draft": 2.7372262773722627,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-long-128k-cold",
+        "time_utc": "2026-09-30T13:12:43.696588+00:00",
+        "wall_s": 376.17457898997236,
+        "aggregate_tps": 21.77712279759971,
+        "requests": 8,
+        "prompt_tokens": 1046888,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 192.57357304274774,
+          "p50": 192.7194677934749,
+          "p95": 326.91945817545053
+        },
+        "latency_s": {
+          "mean": 363.52640507811884,
+          "p50": 363.96722626750125,
+          "p95": 373.4625977029791
+        },
+        "tpot_s": {
+          "mean": 0.1671093177276355,
+          "p50": 0.17099493238857022,
+          "p95": 0.29164988848098866
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2221.0,
+        "spec_decode_num_accepted_tokens_total": 5979.0,
+        "accepted_draft_tokens_per_draft": 2.692030616839262,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 0.2809912679006432,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-long-128k-warm",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-long-128k-warm",
+        "time_utc": "2026-09-30T11:55:41.208089+00:00",
+        "wall_s": 48.93368943600217,
+        "aggregate_tps": 167.41022584683486,
+        "requests": 8,
+        "prompt_tokens": 1046888,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 3.972242904128507,
+          "p50": 5.0475307415181305,
+          "p95": 5.535595558467321
+        },
+        "latency_s": {
+          "mean": 38.50589739262068,
+          "p50": 36.860416773473844,
+          "p95": 47.110083307264716
+        },
+        "tpot_s": {
+          "mean": 0.03375723801416635,
+          "p50": 0.03361675875073773,
+          "p95": 0.04064559547295978
+        },
+        "prefix_cache_hits_total": 1031424.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2268.0,
+        "spec_decode_num_accepted_tokens_total": 5938.0,
+        "accepted_draft_tokens_per_draft": 2.6181657848324513,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-long-128k-warm",
+        "time_utc": "2026-09-30T13:13:29.042447+00:00",
+        "wall_s": 45.23259936401155,
+        "aggregate_tps": 181.10831823027638,
+        "requests": 8,
+        "prompt_tokens": 1046888,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 3.9674145968747325,
+          "p50": 4.415173721004976,
+          "p95": 5.73686032606056
+        },
+        "latency_s": {
+          "mean": 35.96493909612764,
+          "p50": 34.66573184050503,
+          "p95": 43.57450894195353
+        },
+        "tpot_s": {
+          "mean": 0.031278127565252105,
+          "p50": 0.030855295001473396,
+          "p95": 0.03788687544672856
+        },
+        "prefix_cache_hits_total": 1031424.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2235.0,
+        "spec_decode_num_accepted_tokens_total": 5975.0,
+        "accepted_draft_tokens_per_draft": 2.6733780760626398,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 8.18235105660392,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-long-260k-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-long-260k-cold",
+        "time_utc": "2026-09-30T12:09:42.633253+00:00",
+        "wall_s": 742.0554670969723,
+        "aggregate_tps": 11.039606017658333,
+        "requests": 8,
+        "prompt_tokens": 2080488,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 398.67138577637525,
+          "p50": 397.6818457384943,
+          "p95": 680.2643326411111
+        },
+        "latency_s": {
+          "mean": 714.984218450998,
+          "p50": 725.6784182499978,
+          "p95": 739.7692420535401
+        },
+        "tpot_s": {
+          "mean": 0.30920120496053055,
+          "p50": 0.3206222605195538,
+          "p95": 0.5234028472559908
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2232.0,
+        "spec_decode_num_accepted_tokens_total": 5972.0,
+        "accepted_draft_tokens_per_draft": 2.675627240143369,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-long-260k-cold",
+        "time_utc": "2026-09-30T13:27:31.286616+00:00",
+        "wall_s": 743.2168566840119,
+        "aggregate_tps": 11.022354951083857,
+        "requests": 8,
+        "prompt_tokens": 2080488,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 399.8842199213759,
+          "p50": 398.9533787040273,
+          "p95": 681.8138383993064
+        },
+        "latency_s": {
+          "mean": 716.100655958995,
+          "p50": 729.959082396992,
+          "p95": 739.8751847242296
+        },
+        "tpot_s": {
+          "mean": 0.3091069755988457,
+          "p50": 0.32494681387388547,
+          "p95": 0.5247195988560053
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2230.0,
+        "spec_decode_num_accepted_tokens_total": 5970.0,
+        "accepted_draft_tokens_per_draft": 2.6771300448430493,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": -0.1562652376079554,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-long-260k-warm",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-long-260k-warm",
+        "time_utc": "2026-09-30T12:10:34.997558+00:00",
+        "wall_s": 52.237947957997676,
+        "aggregate_tps": 156.82086146620537,
+        "requests": 8,
+        "prompt_tokens": 2080488,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 4.995751225491404,
+          "p50": 5.454933603497921,
+          "p95": 7.3870772639987985
+        },
+        "latency_s": {
+          "mean": 42.18272642700322,
+          "p50": 40.96207044553012,
+          "p95": 49.996824350711535
+        },
+        "tpot_s": {
+          "mean": 0.036350904400304807,
+          "p50": 0.035958094408132274,
+          "p95": 0.04185940840370365
+        },
+        "prefix_cache_hits_total": 2062848.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2282.0,
+        "spec_decode_num_accepted_tokens_total": 5920.0,
+        "accepted_draft_tokens_per_draft": 2.59421560035057,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-long-260k-warm",
+        "time_utc": "2026-09-30T13:28:20.099761+00:00",
+        "wall_s": 48.698070884041954,
+        "aggregate_tps": 168.2202159405141,
+        "requests": 8,
+        "prompt_tokens": 2080488,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 4.977031944137707,
+          "p50": 5.455323881498771,
+          "p95": 7.305585309959133
+        },
+        "latency_s": {
+          "mean": 39.14890962463687,
+          "p50": 38.70424926551641,
+          "p95": 46.6622181187995
+        },
+        "tpot_s": {
+          "mean": 0.033403594995600354,
+          "p50": 0.033121247750219684,
+          "p95": 0.039174975680502794
+        },
+        "prefix_cache_hits_total": 2062848.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2238.0,
+        "spec_decode_num_accepted_tokens_total": 5963.0,
+        "accepted_draft_tokens_per_draft": 2.664432529043789,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 7.269029367476887,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-long-32k-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-long-32k-cold",
+        "time_utc": "2026-09-30T11:46:55.192421+00:00",
+        "wall_s": 120.70380910095992,
+        "aggregate_tps": 67.86861210939905,
+        "requests": 8,
+        "prompt_tokens": 261280,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 47.622024318123295,
+          "p50": 47.232198448997224,
+          "p95": 78.69687590896501
+        },
+        "latency_s": {
+          "mean": 111.20768239974859,
+          "p50": 109.96718494751258,
+          "p95": 118.6042546043871
+        },
+        "tpot_s": {
+          "mean": 0.06215606850598759,
+          "p50": 0.06310645736267341,
+          "p95": 0.09091788718987787
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2201.0,
+        "spec_decode_num_accepted_tokens_total": 5993.0,
+        "accepted_draft_tokens_per_draft": 2.7228532485233985,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-long-32k-cold",
+        "time_utc": "2026-09-30T13:04:50.447983+00:00",
+        "wall_s": 119.22892863000743,
+        "aggregate_tps": 68.70815744240652,
+        "requests": 8,
+        "prompt_tokens": 261280,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 47.751431560383935,
+          "p50": 47.36213823201251,
+          "p95": 78.92365675379988
+        },
+        "latency_s": {
+          "mean": 109.22958437201305,
+          "p50": 107.04340403352398,
+          "p95": 117.2854160044575
+        },
+        "tpot_s": {
+          "mean": 0.06009594605242338,
+          "p50": 0.06125823366521737,
+          "p95": 0.08829641519454631
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2210.0,
+        "spec_decode_num_accepted_tokens_total": 5991.0,
+        "accepted_draft_tokens_per_draft": 2.7108597285067875,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 1.2370156202018423,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-long-32k-warm",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-long-32k-warm",
+        "time_utc": "2026-09-30T11:47:39.946349+00:00",
+        "wall_s": 44.642829930002335,
+        "aggregate_tps": 183.50091185627423,
+        "requests": 8,
+        "prompt_tokens": 261280,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 3.1012566261197207,
+          "p50": 2.7584300549933687,
+          "p95": 4.3862101663777135
+        },
+        "latency_s": {
+          "mean": 35.34974793411675,
+          "p50": 34.218475190515164,
+          "p95": 42.70347647805174
+        },
+        "tpot_s": {
+          "mean": 0.03152345191397559,
+          "p50": 0.031119406223382468,
+          "p95": 0.03801622377728582
+        },
+        "prefix_cache_hits_total": 248064.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2193.0,
+        "spec_decode_num_accepted_tokens_total": 6004.0,
+        "accepted_draft_tokens_per_draft": 2.737802097583219,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-long-32k-warm",
+        "time_utc": "2026-09-30T13:05:32.798803+00:00",
+        "wall_s": 42.2415230179904,
+        "aggregate_tps": 193.93240145510563,
+        "requests": 8,
+        "prompt_tokens": 261280,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 3.1053412218752783,
+          "p50": 2.757300255500013,
+          "p95": 4.399229409659165
+        },
+        "latency_s": {
+          "mean": 33.70481510449463,
+          "p50": 32.59022812152398,
+          "p95": 40.8522049100371
+        },
+        "tpot_s": {
+          "mean": 0.029911509171670916,
+          "p50": 0.029162197327491656,
+          "p95": 0.03619711517048455
+        },
+        "prefix_cache_hits_total": 248064.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2231.0,
+        "spec_decode_num_accepted_tokens_total": 5961.0,
+        "accepted_draft_tokens_per_draft": 2.671896010757508,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 5.684707227505115,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-long-8k-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-long-8k-cold",
+        "time_utc": "2026-09-30T11:43:43.952035+00:00",
+        "wall_s": 59.51462197100045,
+        "aggregate_tps": 137.64684591278586,
+        "requests": 8,
+        "prompt_tokens": 65112,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 12.492342869998538,
+          "p50": 12.644624956999905,
+          "p95": 19.70932737754483
+        },
+        "latency_s": {
+          "mean": 50.67319176187448,
+          "p50": 49.59740226599388,
+          "p95": 57.8877743803605
+        },
+        "tpot_s": {
+          "mean": 0.037322432934385086,
+          "p50": 0.0374175839012938,
+          "p95": 0.04239758249384875
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2211.0,
+        "spec_decode_num_accepted_tokens_total": 5989.0,
+        "accepted_draft_tokens_per_draft": 2.70872908186341,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-long-8k-cold",
+        "time_utc": "2026-09-30T13:01:43.637901+00:00",
+        "wall_s": 56.41903191601159,
+        "aggregate_tps": 145.1992301497667,
+        "requests": 8,
+        "prompt_tokens": 65112,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 13.255768760995124,
+          "p50": 13.6409978424781,
+          "p95": 19.81346960296214
+        },
+        "latency_s": {
+          "mean": 48.295312938134884,
+          "p50": 46.557088674016995,
+          "p95": 54.7889673539612
+        },
+        "tpot_s": {
+          "mean": 0.034251753838846294,
+          "p50": 0.03545299099658922,
+          "p95": 0.03999019236857948
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2168.0,
+        "spec_decode_num_accepted_tokens_total": 6029.0,
+        "accepted_draft_tokens_per_draft": 2.7809040590405902,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 5.48678335990791,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-long-8k-warm",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-long-8k-warm",
+        "time_utc": "2026-09-30T11:44:31.489361+00:00",
+        "wall_s": 47.417792920954525,
+        "aggregate_tps": 172.7621530942207,
+        "requests": 8,
+        "prompt_tokens": 65112,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 5.314667625745642,
+          "p50": 6.054998955485644,
+          "p95": 8.13181776421261
+        },
+        "latency_s": {
+          "mean": 38.96290746775048,
+          "p50": 37.78805250997539,
+          "p95": 46.0924218482367
+        },
+        "tpot_s": {
+          "mean": 0.03289173005083562,
+          "p50": 0.03335780570038752,
+          "p95": 0.03781721935493012
+        },
+        "prefix_cache_hits_total": 39168.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2204.0,
+        "spec_decode_num_accepted_tokens_total": 5999.0,
+        "accepted_draft_tokens_per_draft": 2.7218693284936477,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-long-8k-warm",
+        "time_utc": "2026-09-30T13:02:28.481965+00:00",
+        "wall_s": 44.72095409000758,
+        "aggregate_tps": 183.1803494959517,
+        "requests": 8,
+        "prompt_tokens": 65112,
+        "output_tokens": 8192,
+        "ttft_s": {
+          "mean": 5.344795644006808,
+          "p50": 6.08931810798822,
+          "p95": 8.172710317719611
+        },
+        "latency_s": {
+          "mean": 36.93675577700196,
+          "p50": 36.46586439298699,
+          "p95": 43.37613640208437
+        },
+        "tpot_s": {
+          "mean": 0.030881681459428302,
+          "p50": 0.03119187630303996,
+          "p95": 0.03512515447113355
+        },
+        "prefix_cache_hits_total": 39168.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 2219.0,
+        "spec_decode_num_accepted_tokens_total": 5975.0,
+        "accepted_draft_tokens_per_draft": 2.6926543488057684,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 6.030369623866139,
+      "exact_output_sequences": 1,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-mixed-r0-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-mixed-r0-cold",
+        "time_utc": "2026-09-30T11:31:46.153846+00:00",
+        "wall_s": 142.61974053701852,
+        "aggregate_tps": 229.75781526888073,
+        "requests": 32,
+        "prompt_tokens": 32620,
+        "output_tokens": 32768,
+        "ttft_s": {
+          "mean": 1.0575567243431578,
+          "p50": 0.6526091810083017,
+          "p95": 2.437558246491244
+        },
+        "latency_s": {
+          "mean": 34.258037465813686,
+          "p50": 32.556710303993896,
+          "p95": 46.92540373188385
+        },
+        "tpot_s": {
+          "mean": 0.032454037870450175,
+          "p50": 0.03119602637048647,
+          "p95": 0.0452264755542743
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 8490.0,
+        "spec_decode_num_accepted_tokens_total": 24302.0,
+        "accepted_draft_tokens_per_draft": 2.862426383981154,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-mixed-r0-cold",
+        "time_utc": "2026-09-30T12:50:32.614881+00:00",
+        "wall_s": 133.88151566596935,
+        "aggregate_tps": 244.75372748061238,
+        "requests": 32,
+        "prompt_tokens": 32620,
+        "output_tokens": 32768,
+        "ttft_s": {
+          "mean": 1.0321424780649977,
+          "p50": 0.637745410494972,
+          "p95": 2.451995574432658
+        },
+        "latency_s": {
+          "mean": 32.05273869423036,
+          "p50": 30.791396355023608,
+          "p95": 44.04174646556202
+        },
+        "tpot_s": {
+          "mean": 0.03032316345666213,
+          "p50": 0.02947126587735965,
+          "p95": 0.04243799505966343
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 8480.0,
+        "spec_decode_num_accepted_tokens_total": 24307.0,
+        "accepted_draft_tokens_per_draft": 2.8663915094339623,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 6.526834438333351,
+      "exact_output_sequences": 1,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-mixed-r1-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-mixed-r1-cold",
+        "time_utc": "2026-09-30T11:36:14.360644+00:00",
+        "wall_s": 145.58677746204194,
+        "aggregate_tps": 225.0753850811996,
+        "requests": 32,
+        "prompt_tokens": 32620,
+        "output_tokens": 32768,
+        "ttft_s": {
+          "mean": 1.0702140912489995,
+          "p50": 0.6541225199762266,
+          "p95": 2.2539990555873373
+        },
+        "latency_s": {
+          "mean": 34.40699471113112,
+          "p50": 32.30392791001941,
+          "p95": 47.15540099215868
+        },
+        "tpot_s": {
+          "mean": 0.032587273333218106,
+          "p50": 0.030256384404227985,
+          "p95": 0.04459638088203138
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 8574.0,
+        "spec_decode_num_accepted_tokens_total": 24207.0,
+        "accepted_draft_tokens_per_draft": 2.8233030090972706,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-mixed-r1-cold",
+        "time_utc": "2026-09-30T12:54:43.885796+00:00",
+        "wall_s": 135.30401231301948,
+        "aggregate_tps": 242.18054911921436,
+        "requests": 32,
+        "prompt_tokens": 32620,
+        "output_tokens": 32768,
+        "ttft_s": {
+          "mean": 1.0273899433777842,
+          "p50": 0.6399113015213516,
+          "p95": 2.4603536600625375
+        },
+        "latency_s": {
+          "mean": 32.174070513217885,
+          "p50": 29.463467094989028,
+          "p95": 45.32144243601069
+        },
+        "tpot_s": {
+          "mean": 0.030446413069247412,
+          "p50": 0.02779014530007997,
+          "p95": 0.04368080657765209
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 8499.0,
+        "spec_decode_num_accepted_tokens_total": 24306.0,
+        "accepted_draft_tokens_per_draft": 2.859865866572538,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 7.599748871625289,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-mixed-r2-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-mixed-r2-cold",
+        "time_utc": "2026-09-30T11:40:41.483461+00:00",
+        "wall_s": 142.76274350599851,
+        "aggregate_tps": 229.52767084238036,
+        "requests": 32,
+        "prompt_tokens": 32620,
+        "output_tokens": 32768,
+        "ttft_s": {
+          "mean": 1.079843978941426,
+          "p50": 0.6566989700077102,
+          "p95": 2.2588784276798832
+        },
+        "latency_s": {
+          "mean": 34.177682457186165,
+          "p50": 32.70159835196682,
+          "p95": 47.622989423145185
+        },
+        "tpot_s": {
+          "mean": 0.03235370330229202,
+          "p50": 0.030871032103596853,
+          "p95": 0.04520837361976696
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 8466.0,
+        "spec_decode_num_accepted_tokens_total": 24342.0,
+        "accepted_draft_tokens_per_draft": 2.8752657689581858,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-mixed-r2-cold",
+        "time_utc": "2026-09-30T12:58:51.756040+00:00",
+        "wall_s": 134.97903350001434,
+        "aggregate_tps": 242.76362891571986,
+        "requests": 32,
+        "prompt_tokens": 32620,
+        "output_tokens": 32768,
+        "ttft_s": {
+          "mean": 1.0809194525991188,
+          "p50": 0.641023149510147,
+          "p95": 2.285166033846326
+        },
+        "latency_s": {
+          "mean": 32.023592661629664,
+          "p50": 29.977432626998052,
+          "p95": 44.09590753707161
+        },
+        "tpot_s": {
+          "mean": 0.03024699238419408,
+          "p50": 0.028525550963334558,
+          "p95": 0.04159727046814817
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 8532.0,
+        "spec_decode_num_accepted_tokens_total": 24261.0,
+        "accepted_draft_tokens_per_draft": 2.8435302390998594,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 5.766606712281241,
+      "exact_output_sequences": 1,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-thinking-r0-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-thinking-r0-cold",
+        "time_utc": "2026-09-30T11:33:35.802608+00:00",
+        "wall_s": 92.96910803404171,
+        "aggregate_tps": 176.23058181864894,
+        "requests": 16,
+        "prompt_tokens": 16929,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.4422324918778031,
+          "p50": 0.6547576214943547,
+          "p95": 2.5054038357775426
+        },
+        "latency_s": {
+          "mean": 43.36756503043216,
+          "p50": 43.076713902002666,
+          "p95": 52.388627125750645
+        },
+        "tpot_s": {
+          "mean": 0.04098272975420758,
+          "p50": 0.03989295052345806,
+          "p95": 0.049281249837473624
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 5742.0,
+        "spec_decode_num_accepted_tokens_total": 10655.0,
+        "accepted_draft_tokens_per_draft": 1.8556252176941832,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-thinking-r0-cold",
+        "time_utc": "2026-09-30T12:52:16.548962+00:00",
+        "wall_s": 85.10955184401246,
+        "aggregate_tps": 192.5048322428998,
+        "requests": 16,
+        "prompt_tokens": 16929,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.4672214516904205,
+          "p50": 0.6408644574985374,
+          "p95": 2.5771416860370664
+        },
+        "latency_s": {
+          "mean": 40.659097147756256,
+          "p50": 40.32700877750176,
+          "p95": 47.79898248425161
+        },
+        "tpot_s": {
+          "mean": 0.03831072893066064,
+          "p50": 0.03841337649758113,
+          "p95": 0.044741264238268186
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 5791.0,
+        "spec_decode_num_accepted_tokens_total": 10592.0,
+        "accepted_draft_tokens_per_draft": 1.8290450699361078,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 9.234634679353192,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-thinking-r1-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-thinking-r1-cold",
+        "time_utc": "2026-09-30T11:38:04.679407+00:00",
+        "wall_s": 91.57603099499829,
+        "aggregate_tps": 178.9114446431388,
+        "requests": 16,
+        "prompt_tokens": 16929,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.406430123748578,
+          "p50": 1.5188275149848778,
+          "p95": 2.19101147998299
+        },
+        "latency_s": {
+          "mean": 43.40275424043648,
+          "p50": 42.01754652897944,
+          "p95": 52.50766272675537
+        },
+        "tpot_s": {
+          "mean": 0.04105212523625406,
+          "p50": 0.040282464596781545,
+          "p95": 0.0493068853198887
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 5776.0,
+        "spec_decode_num_accepted_tokens_total": 10619.0,
+        "accepted_draft_tokens_per_draft": 1.8384695290858726,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-thinking-r1-cold",
+        "time_utc": "2026-09-30T12:56:22.928877+00:00",
+        "wall_s": 84.0490542089683,
+        "aggregate_tps": 194.93378187534412,
+        "requests": 16,
+        "prompt_tokens": 16929,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.4447421700715495,
+          "p50": 1.518197407014668,
+          "p95": 2.2004721390258055
+        },
+        "latency_s": {
+          "mean": 40.53176537262698,
+          "p50": 40.68646729600732,
+          "p95": 45.772584936989006
+        },
+        "tpot_s": {
+          "mean": 0.03820823382458986,
+          "p50": 0.039153609903236145,
+          "p95": 0.04271320157084329
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 5774.0,
+        "spec_decode_num_accepted_tokens_total": 10620.0,
+        "accepted_draft_tokens_per_draft": 1.8392795289227573,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 8.955456854179378,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    },
+    {
+      "case": "install-c8-thinking-r2-cold",
+      "baseline": {
+        "label": "original-c8-r1-install-c8-thinking-r2-cold",
+        "time_utc": "2026-09-30T11:42:28.855061+00:00",
+        "wall_s": 91.31897823698819,
+        "aggregate_tps": 179.4150604431945,
+        "requests": 16,
+        "prompt_tokens": 16929,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.476068947744352,
+          "p50": 0.8129897380131297,
+          "p95": 2.537510115726036
+        },
+        "latency_s": {
+          "mean": 43.74554954975247,
+          "p50": 44.26507407898316,
+          "p95": 51.41434243578988
+        },
+        "tpot_s": {
+          "mean": 0.041319140373419466,
+          "p50": 0.04085323288317548,
+          "p95": 0.049344848925240964
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 5779.0,
+        "spec_decode_num_accepted_tokens_total": 10613.0,
+        "accepted_draft_tokens_per_draft": 1.8364768991174945,
+        "errors": 0.0
+      },
+      "candidate": {
+        "label": "packaged-c8-r1-install-c8-thinking-r2-cold",
+        "time_utc": "2026-09-30T13:00:32.768867+00:00",
+        "wall_s": 83.58964544703485,
+        "aggregate_tps": 196.00513810507115,
+        "requests": 16,
+        "prompt_tokens": 16929,
+        "output_tokens": 16384,
+        "ttft_s": {
+          "mean": 1.3993604252427758,
+          "p50": 0.7247646114847157,
+          "p95": 2.633563552997657
+        },
+        "latency_s": {
+          "mean": 40.374047718185466,
+          "p50": 40.23188910348108,
+          "p95": 47.12459881399991
+        },
+        "tpot_s": {
+          "mean": 0.038098423551263624,
+          "p50": 0.03776625895502641,
+          "p95": 0.04373003655987931
+        },
+        "prefix_cache_hits_total": 0.0,
+        "num_preemptions_total": 0.0,
+        "spec_decode_num_drafts_total": 5707.0,
+        "spec_decode_num_accepted_tokens_total": 10686.0,
+        "accepted_draft_tokens_per_draft": 1.8724373576309794,
+        "errors": 0.0
+      },
+      "all_payload_hashes_and_token_counts_match": true,
+      "throughput_change_percent": 9.246758672820166,
+      "exact_output_sequences": 0,
+      "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+    }
+  ],
+  "repeated_workloads": {
+    "code": {
+      "baseline": {
+        "tps_runs": [
+          309.8649878438045,
+          310.3703962855412,
+          318.1478969289017
+        ],
+        "mean_tps": 312.79442701941576,
+        "pooled_tps": 312.74886385012115
+      },
+      "candidate": {
+        "tps_runs": [
+          350.0590649733393,
+          343.31238018606683,
+          339.3721482602491
+        ],
+        "mean_tps": 344.2478644732184,
+        "pooled_tps": 344.1915178802572
+      },
+      "mean_tps_change_percent": 10.055625911727084,
+      "pooled_tps_change_percent": 10.05364292712645,
+      "paired_changes_percent": [
+        12.971480711397977,
+        10.613764809649883,
+        6.6711902031181936
+      ],
+      "caveat": "Three repeat cases, not a confidence interval; all payload hashes and token counts verified."
+    },
+    "mixed": {
+      "baseline": {
+        "tps_runs": [
+          229.75781526888073,
+          225.0753850811996,
+          229.52767084238036
+        ],
+        "mean_tps": 228.1202903974869,
+        "pooled_tps": 228.0997945345252
+      },
+      "candidate": {
+        "tps_runs": [
+          244.75372748061238,
+          242.18054911921436,
+          242.76362891571986
+        ],
+        "mean_tps": 243.23263517184887,
+        "pooled_tps": 243.2276586553396
+      },
+      "mean_tps_change_percent": 6.624726256498059,
+      "pooled_tps_change_percent": 6.632125272925071,
+      "paired_changes_percent": [
+        6.526834438333351,
+        7.599748871625289,
+        5.766606712281241
+      ],
+      "caveat": "Three repeat cases, not a confidence interval; all payload hashes and token counts verified."
+    },
+    "thinking": {
+      "baseline": {
+        "tps_runs": [
+          176.23058181864894,
+          178.9114446431388,
+          179.4150604431945
+        ],
+        "mean_tps": 178.1856956349941,
+        "pooled_tps": 178.1746770371027
+      },
+      "candidate": {
+        "tps_runs": [
+          192.5048322428998,
+          194.93378187534412,
+          196.00513810507115
+        ],
+        "mean_tps": 194.48125074110501,
+        "pooled_tps": 194.47018805586856
+      },
+      "mean_tps_change_percent": 9.145265588261186,
+      "pooled_tps_change_percent": 9.14580640175513,
+      "paired_changes_percent": [
+        9.234634679353192,
+        8.955456854179378,
+        9.246758672820166
+      ],
+      "caveat": "Three repeat cases, not a confidence interval; all payload hashes and token counts verified."
+    }
+  },
+  "production_confirmation": {
+    "scope": "Separate post-install code confirmation on original production cache mounts; reuses original case r0 for comparison, not part of the three-repeat staging mean.",
+    "baseline": {
+      "label": "original-c8-r1-install-c8-code-r0",
+      "time_utc": "2026-09-30T12:12:36.381946+00:00",
+      "wall_s": 52.8746410299791,
+      "aggregate_tps": 309.8649878438045,
+      "requests": 16,
+      "prompt_tokens": 16486,
+      "output_tokens": 16384,
+      "ttft_s": {
+        "mean": 1.5759169913180813,
+        "p50": 1.443615521013271,
+        "p95": 2.449080384481931
+      },
+      "latency_s": {
+        "mean": 26.14365510999778,
+        "p50": 26.169111241499195,
+        "p95": 27.62097166950116
+      },
+      "tpot_s": {
+        "mean": 0.02401538428023431,
+        "p50": 0.024097317382189166,
+        "p95": 0.02560847002980122
+      },
+      "prefix_cache_hits_total": 0.0,
+      "num_preemptions_total": 0.0,
+      "spec_decode_num_drafts_total": 3661.0,
+      "spec_decode_num_accepted_tokens_total": 12736.0,
+      "accepted_draft_tokens_per_draft": 3.478830920513521,
+      "errors": 0.0
+    },
+    "candidate": {
+      "label": "production-c8-confirmation-install-c8-code-r0",
+      "time_utc": "2026-09-30T13:39:10.347326+00:00",
+      "wall_s": 48.9857095060288,
+      "aggregate_tps": 334.46489119410586,
+      "requests": 16,
+      "prompt_tokens": 16486,
+      "output_tokens": 16384,
+      "ttft_s": {
+        "mean": 1.567007295365329,
+        "p50": 1.80834571851301,
+        "p95": 2.133475521724904
+      },
+      "latency_s": {
+        "mean": 24.09994266762442,
+        "p50": 23.928746518475236,
+        "p95": 26.028067626277334
+      },
+      "tpot_s": {
+        "mean": 0.022026329787154537,
+        "p50": 0.021947456342638137,
+        "p95": 0.023683436886630594
+      },
+      "prefix_cache_hits_total": 0.0,
+      "num_preemptions_total": 0.0,
+      "spec_decode_num_drafts_total": 3631.0,
+      "spec_decode_num_accepted_tokens_total": 12767.0,
+      "accepted_draft_tokens_per_draft": 3.516111264114569,
+      "errors": 0.0
+    },
+    "all_payload_hashes_and_token_counts_match": true,
+    "throughput_change_percent": 7.938910272334998,
+    "exact_output_sequences": 0,
+    "caveat": "A matched run pair, not an independent-replicate confidence interval. Output sequence variation also occurs within the unchanged baseline. End-to-end timing includes variable dynamic batching and draft acceptance."
+  }
+}
